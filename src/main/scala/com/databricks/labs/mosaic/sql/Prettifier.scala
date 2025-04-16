@@ -1,13 +1,10 @@
 package com.databricks.labs.mosaic.sql
 
 import java.util.Locale
-
 import scala.util.Try
-
 import com.databricks.labs.mosaic.functions.MosaicContext
-
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.functions.{col, expr}
 
 object Prettifier {
 
@@ -22,12 +19,12 @@ object Prettifier {
             .map(colName =>
                 Try {
                     if (explicitColumns.contains(colName)) {
-                        st_aswkt(col(colName))
+                        expr(s"st_aswkt($colName)")
                     } else if (
                       keywords.exists(kw => colName.toUpperCase(Locale.ROOT).contains(kw)) &
                           !colName.toUpperCase(Locale.ROOT).contains("INDEX")
                     ) {
-                        st_aswkt(col(colName)).alias(s"WKT($colName)")
+                        expr(s"st_aswkt($colName)").alias(s"WKT($colName)")
                     } else {
                         col(colName)
                     }

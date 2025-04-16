@@ -1,6 +1,8 @@
 package com.databricks.labs.mosaic.expressions.index
 
+import com.databricks.labs.mosaic.core.jts.JTS
 import com.databricks.labs.mosaic.core.types.ChipType
+import com.databricks.labs.mosaic.expressions.SpatialSQLAPIsMock.{st_aswkb, st_aswkt}
 import com.databricks.labs.mosaic.functions.MosaicContext
 import com.databricks.labs.mosaic.test.{MosaicSpatialQueryTest, mocks}
 import org.apache.spark.sql.Row
@@ -68,7 +70,7 @@ trait CellIntersectionBehaviors extends MosaicSpatialQueryTest {
             .select($"actual_wkt", $"expected_wkt")
             .as[(String, String)]
             .collect()
-            .map(r => (mc.getGeometryAPI.geometry(r._1, "WKT"), mc.getGeometryAPI.geometry(r._2, "WKT")))
+            .map(r => (JTS.geometry(r._1, "WKT"), JTS.geometry(r._2, "WKT")))
 
         res.foreach { case (actual, expected) => actual.equalsTopo(expected) shouldEqual true }
 
@@ -81,9 +83,9 @@ trait CellIntersectionBehaviors extends MosaicSpatialQueryTest {
                    |) select st_aswkt(intersection.wkb) from subquery""".stripMargin)
             .as[String]
             .collect()
-            .map(r => mc.getGeometryAPI.geometry(r, "WKT"))
+            .map(r => JTS.geometry(r, "WKT"))
 
-        sqlResult.foreach(actual => actual.equalsTopo(mc.getGeometryAPI.geometry("POLYGON ((0 0, 2 0, 2 1, 0 1, 0 0))", "WKT")) shouldEqual true)
+        sqlResult.foreach(actual => actual.equalsTopo(JTS.geometry("POLYGON ((0 0, 2 0, 2 1, 0 1, 0 0))", "WKT")) shouldEqual true)
     }
 
     def columnFunctionSignatures(mosaicContext: MosaicContext): Unit = {
@@ -103,8 +105,7 @@ trait CellIntersectionBehaviors extends MosaicSpatialQueryTest {
         val cellIntersectionExpr = CellIntersection(
             lit(wkt).expr,
             lit(wkt).expr,
-            mc.getIndexSystem,
-            mc.getGeometryAPI.name
+            mc.getIndexSystem
         )
 
         cellIntersectionExpr.dataType shouldEqual ChipType(LongType)
@@ -112,8 +113,7 @@ trait CellIntersectionBehaviors extends MosaicSpatialQueryTest {
         val badExpr = CellIntersection(
             lit(10).expr,
             lit(true).expr,
-            mc.getIndexSystem,
-            mc.getGeometryAPI.name
+            mc.getIndexSystem
         )
 
         noException should be thrownBy mc.functions.grid_cell_intersection(lit(""), lit(""))

@@ -29,8 +29,7 @@ case class RST_Tessellate(
         RasterTessellate.tessellate(
           tile.getRaster,
           resolution,
-          indexSystem,
-          geometryAPI
+          indexSystem
         )
     }
 

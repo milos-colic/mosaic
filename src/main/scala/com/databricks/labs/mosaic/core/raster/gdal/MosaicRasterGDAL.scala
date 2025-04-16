@@ -1,8 +1,7 @@
 package com.databricks.labs.mosaic.core.raster.gdal
 
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometry
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
+import com.databricks.labs.mosaic.core.jts.{JTS, JTSGeometry, JTSPoint}
 import com.databricks.labs.mosaic.core.raster.api.GDAL
 import com.databricks.labs.mosaic.core.raster.gdal.MosaicRasterGDAL.readRaster
 import com.databricks.labs.mosaic.core.raster.io.RasterCleaner.dispose
@@ -72,18 +71,16 @@ case class MosaicRasterGDAL(
 
     /**
       * For the provided geometry and CRS, get bounding box polygon.
-      * @param geometryAPI
-      *   Default is JTS.
       * @param destCRS
       *   CRS for the bbox, default is [[MosaicGDAL.WSG84]].
       * @return
-      *   Returns [[MosaicGeometry]] representing bounding box polygon.
+      *   Returns [[JTSGeometry]] representing bounding box polygon.
       */
-    def bbox(geometryAPI: GeometryAPI, destCRS: SpatialReference = MosaicGDAL.WSG84): MosaicGeometry = {
-        windowBBox((0, 0, xSize, ySize), geometryAPI, destCRS)
+    def bbox(destCRS: SpatialReference = MosaicGDAL.WSG84): JTSGeometry = {
+        windowBBox((0, 0, xSize, ySize), destCRS)
     }
 
-    def windowBBox(window: (Int, Int, Int, Int), geometryAPI: GeometryAPI, destCRS: SpatialReference = MosaicGDAL.WSG84): MosaicGeometry = {
+    def windowBBox(window: (Int, Int, Int, Int), destCRS: SpatialReference = MosaicGDAL.WSG84): JTSGeometry = {
         val gt = getGeoTransform
 
         val sourceCRS = getSpatialReference
@@ -101,13 +98,13 @@ case class MosaicRasterGDAL(
         val p3 = transform.TransformPoint(gt(0) + gt(1) * window._3, gt(3) + gt(5) * window._4).toSeq.take(2)
         val p4 = transform.TransformPoint(gt(0) + gt(1) * window._1, gt(3) + gt(5) * window._4).toSeq.take(2)
 
-        val bbox = geometryAPI.geometry(
+        val bbox = JTS.geometry(
           Seq(
             p1,
             p2,
             p3,
             p4
-          ).map(geometryAPI.fromCoords),
+          ).map(JTS.fromCoords).map(_.asInstanceOf[JTSPoint]),
           POLYGON
         )
 
@@ -133,7 +130,7 @@ case class MosaicRasterGDAL(
 
     /**
       * @note
-      *   If memory size is -1 this will destroy the raster and you will need to
+      *   If memory size is -1 this will destroy the raster, and you will need to
       *   refresh it to use it again.
       * @return
       *   Returns the amount of memory occupied by the file in bytes.
@@ -394,16 +391,14 @@ case class MosaicRasterGDAL(
       *   Clip the raster based on the cell id geometry.
       * @param indexSystem
       *   Default is H3.
-      * @param geometryAPI
-      *   Default is JTS.
       * @return
       *   Returns [[MosaicRasterGDAL]] for a given cell ID. Used for
       *   tessellation.
       */
-    def getRasterForCell(cellID: Long, indexSystem: IndexSystem, geometryAPI: GeometryAPI): MosaicRasterGDAL = {
-        val cellGeom = indexSystem.indexToGeometry(cellID, geometryAPI)
+    def getRasterForCell(cellID: Long, indexSystem: IndexSystem): MosaicRasterGDAL = {
+        val cellGeom = indexSystem.indexToGeometry(cellID)
         val geomCRS = indexSystem.osrSpatialRef
-        RasterClipByVector.clip(this, cellGeom, geomCRS, geometryAPI)
+        RasterClipByVector.clip(this, cellGeom, geomCRS)
     }
 
     // ///////////////////////////////////////
@@ -612,8 +607,9 @@ case class MosaicRasterGDAL(
                 val parentDir = Paths.get(tmpPath).getParent.toString
                 val fileName = Paths.get(tmpPath).getFileName.toString
                 val prompt = SysUtils.runScript(Array("/bin/sh", "-c", s"cd $parentDir && zip -r0 $fileName.zip $fileName"))
-                if (prompt._3.nonEmpty)
+                if (prompt._3.nonEmpty) {
                     throw new Exception(s"Error zipping file: ${prompt._3}. Please verify that zip is installed. Run 'apt install zip'.")
+                }
                 s"$tmpPath.zip"
             } else {
                 tmpPath
@@ -673,7 +669,7 @@ case class MosaicRasterGDAL(
             val fromDir = thisPath.getParent
             val toDir = Paths.get(newPath) match {
                 case p: Path if Files.isDirectory(p) => p
-                case p: Path                         => p.getParent()
+                case p: Path                         => p.getParent
             }
             val stemRegex = PathUtils.getStemRegex(this.path)
             PathUtils.wildcardCopy(fromDir.toString, toDir.toString, stemRegex)

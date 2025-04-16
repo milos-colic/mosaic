@@ -1,9 +1,11 @@
 package com.databricks.labs.mosaic.expressions.geometry
 
+import com.databricks.labs.mosaic.core.jts.JTSGeometry
 import com.databricks.labs.mosaic.functions.MosaicContext
-import com.databricks.labs.mosaic.test.{mocks, MosaicSpatialQueryTest}
-import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, CodeGenerator}
+import com.databricks.labs.mosaic.test.{MosaicSpatialQueryTest, mocks}
+import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext}
 import org.apache.spark.sql.execution.WholeStageCodegenExec
+import org.apache.spark.sql.functions
 import org.apache.spark.sql.functions.lit
 import org.scalatest.matchers.must.Matchers.noException
 import org.scalatest.matchers.should.Matchers.{an, be, convertToAnyShouldWrapper}
@@ -16,6 +18,18 @@ trait ST_BufferLoopBehaviors extends MosaicSpatialQueryTest {
         import mc.functions._
         import sc.implicits._
 
+        val buffer_udf = functions.udf((wkt: String, distance1: Double) => {
+            val geom = JTSGeometry.fromWKT(wkt)
+            val geom1 = geom.buffer(distance1)
+            geom1.toWKT
+        })
+
+        val difference_udf = functions.udf((wkt: String, wkt2: String) => {
+            val geom1 = JTSGeometry.fromWKT(wkt)
+            val geom2 = JTSGeometry.fromWKT(wkt2)
+            geom1.difference(geom2)
+        })
+
         val result = mocks
             .getWKTRowsDf()
             .orderBy("id")
@@ -25,9 +39,9 @@ trait ST_BufferLoopBehaviors extends MosaicSpatialQueryTest {
         val expected = mocks
             .getWKTRowsDf()
             .orderBy("id")
-            .withColumn("wkt1", st_buffer($"wkt", lit(0.1)))
-            .withColumn("wkt2", st_buffer($"wkt", lit(0.2)))
-            .withColumn("wkt", st_difference($"wkt2", $"wkt1"))
+            .withColumn("wkt1", buffer_udf($"wkt", lit(0.1)))
+            .withColumn("wkt2", buffer_udf($"wkt", lit(0.2)))
+            .withColumn("wkt", difference_udf($"wkt2", $"wkt1"))
             .select("wkt")
 
         checkGeometryTopo(mc, result, expected, "wkt")
@@ -51,7 +65,7 @@ trait ST_BufferLoopBehaviors extends MosaicSpatialQueryTest {
         val (_, code) = codeGenStage.doCodeGen()
         noException should be thrownBy CodeGenerator.compile(code)
 
-        val stEnvelope = ST_Envelope(lit(1).expr, mc.expressionConfig)
+        val stEnvelope = ST_BufferLoop(lit(1).expr, lit(1).expr, lit(1).expr, mc.expressionConfig)
         val ctx = new CodegenContext
         an[Error] should be thrownBy stEnvelope.genCode(ctx)
     }

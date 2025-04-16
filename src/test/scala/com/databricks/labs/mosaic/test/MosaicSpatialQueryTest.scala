@@ -1,7 +1,8 @@
 package com.databricks.labs.mosaic.test
 
-import com.databricks.labs.mosaic.core.geometry.api.{GeometryAPI, JTS}
 import com.databricks.labs.mosaic.core.index._
+import com.databricks.labs.mosaic.core.jts.JTS
+import com.databricks.labs.mosaic.expressions.SpatialSQLAPIsMock.st_aswkt
 import com.databricks.labs.mosaic.functions.MosaicContext
 import org.apache.spark.sql.catalyst.expressions.CodegenObjectFactoryMode
 import org.apache.spark.sql.catalyst.plans.PlanTest
@@ -42,8 +43,8 @@ abstract class MosaicSpatialQueryTest extends PlanTest with MosaicHelper {
       */
     protected def testAllGeometriesCodegen(testName: String, testTags: Tag*)(testFun: MosaicContext => Unit): Unit = {
         val is = MockIndexSystem
-        for (geom <- geometryApis) {
-            super.test(testName + s" (codegen) (${geom.name}, ${is.name})", testTags: _*)(
+        for (_ <- geometryApis) {
+            super.test(testName + s" (codegen) (${is.name})", testTags: _*)(
               withSQLConf(
                 SQLConf.ADAPTIVE_EXECUTION_ENABLED.key -> "false",
                 SQLConf.WHOLESTAGE_CODEGEN_ENABLED.key -> "true",
@@ -51,7 +52,7 @@ abstract class MosaicSpatialQueryTest extends PlanTest with MosaicHelper {
                 "spark.sql.parquet.compression.codec" -> "uncompressed"
               ) {
                   spark.sparkContext.setLogLevel("ERROR")
-                  withMosaicContext(geom, is) {
+                  withMosaicContext(is) {
                       testFun
                   }
               }
@@ -67,14 +68,14 @@ abstract class MosaicSpatialQueryTest extends PlanTest with MosaicHelper {
     protected def testAllGeometriesNoCodegen(testName: String, testTags: Tag*)(testFun: MosaicContext => Unit): Unit = {
         val is = MockIndexSystem
         for (geom <- geometryApis) {
-            super.test(testName + s" (no codegen) (${geom.name}, ${is.name})", testTags: _*)(
+            super.test(testName + s" (no codegen) (${is.name})", testTags: _*)(
               withSQLConf(
                 SQLConf.WHOLESTAGE_CODEGEN_ENABLED.key -> "false",
                 SQLConf.CODEGEN_FACTORY_MODE.key -> CodegenObjectFactoryMode.NO_CODEGEN.toString,
                 "spark.sql.parquet.compression.codec" -> "uncompressed"
               ) {
                   spark.sparkContext.setLogLevel("ERROR")
-                  withMosaicContext(geom, is) {
+                  withMosaicContext(is) {
                       testFun
                   }
               }
@@ -89,7 +90,7 @@ abstract class MosaicSpatialQueryTest extends PlanTest with MosaicHelper {
     protected def testAllCodegen(testName: String, testTags: Tag*)(testFun: MosaicContext => Unit): Unit = {
         for (geom <- geometryApis) {
             for (is <- indexSystems) {
-                super.test(testName + s" (codegen) (${geom.name}, ${is.name})", testTags: _*)(
+                super.test(testName + s" (codegen) (${is.name})", testTags: _*)(
                   withSQLConf(
                     SQLConf.ADAPTIVE_EXECUTION_ENABLED.key -> "false",
                     SQLConf.WHOLESTAGE_CODEGEN_ENABLED.key -> "true",
@@ -97,7 +98,7 @@ abstract class MosaicSpatialQueryTest extends PlanTest with MosaicHelper {
                     "spark.sql.parquet.compression.codec" -> "uncompressed"
                   ) {
                       spark.sparkContext.setLogLevel("ERROR")
-                      withMosaicContext(geom, is) {
+                      withMosaicContext(is) {
                           testFun
                       }
                   }
@@ -113,14 +114,14 @@ abstract class MosaicSpatialQueryTest extends PlanTest with MosaicHelper {
     protected def testAllNoCodegen(testName: String, testTags: Tag*)(testFun: MosaicContext => Unit): Unit = {
         for (geom <- geometryApis) {
             for (is <- indexSystems) {
-                super.test(testName + s" (no codegen) (${geom.name}, ${is.name})", testTags: _*)(
+                super.test(testName + s" (no codegen) (${is.name})", testTags: _*)(
                   withSQLConf(
                     SQLConf.WHOLESTAGE_CODEGEN_ENABLED.key -> "false",
                     SQLConf.CODEGEN_FACTORY_MODE.key -> CodegenObjectFactoryMode.NO_CODEGEN.toString,
                     "spark.sql.parquet.compression.codec" -> "uncompressed"
                   ) {
                       spark.sparkContext.setLogLevel("ERROR")
-                      withMosaicContext(geom, is) {
+                      withMosaicContext(is) {
                           testFun
                       }
                   }
@@ -152,7 +153,6 @@ object MosaicSpatialQueryTest extends Assertions {
         expectedAnswer: DataFrame,
         geometryFieldName: String
     ): Unit = {
-        import mc.functions.st_aswkt
 
         val actualGeoms = actualAnswer
             .withColumn("answer_wkt", st_aswkt(col(geometryFieldName)))
@@ -160,14 +160,14 @@ object MosaicSpatialQueryTest extends Assertions {
             .orderBy("answer_wkt")
             .collect()
             .map(_.getString(0))
-            .map(mc.getGeometryAPI.geometry(_, "WKT"))
+            .map(JTS.geometry(_, "WKT"))
         val expectedGeoms = expectedAnswer
             .withColumn("answer_wkt", st_aswkt(col(geometryFieldName)))
             .select(col("answer_wkt"))
             .orderBy("answer_wkt")
             .collect()
             .map(_.getString(0))
-            .map(mc.getGeometryAPI.geometry(_, "WKT"))
+            .map(JTS.geometry(_, "WKT"))
 
         actualGeoms.zip(expectedGeoms).foreach { case (actualGeom, expectedGeom) =>
             assert(actualGeom.equalsTopo(expectedGeom), s"$actualGeom did not topologically equal $expectedGeom")
@@ -178,8 +178,8 @@ object MosaicSpatialQueryTest extends Assertions {
 trait MosaicHelper extends BeforeAndAfterEach { self: Suite =>
 
     /** Constructs the MosaicContext from its parts and calls `f`. */
-    protected def withMosaicContext(geometry: GeometryAPI, indexSystem: IndexSystem)(f: MosaicContext => Unit): Unit = {
-        val mc: MosaicContext = MosaicContext.build(indexSystem, geometry)
+    protected def withMosaicContext(indexSystem: IndexSystem)(f: MosaicContext => Unit): Unit = {
+        val mc: MosaicContext = MosaicContext.build(indexSystem)
         f(mc)
 
     }

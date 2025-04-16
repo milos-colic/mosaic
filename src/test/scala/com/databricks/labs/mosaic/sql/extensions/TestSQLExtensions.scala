@@ -1,8 +1,8 @@
 package com.databricks.labs.mosaic.sql.extensions
 
 import com.databricks.labs.mosaic._
-import com.databricks.labs.mosaic.core.geometry.api.JTS
 import com.databricks.labs.mosaic.core.index.{BNGIndexSystem, H3IndexSystem}
+import com.databricks.labs.mosaic.core.jts.JTS
 import com.databricks.labs.mosaic.functions.MosaicContext
 import com.databricks.labs.mosaic.test.SparkSuite
 import org.apache.spark.SparkConf
@@ -19,7 +19,7 @@ class TestSQLExtensions extends AnyFlatSpec with SQLExtensionsBehaviors with Spa
             .set("spark.sql.extensions", "com.databricks.labs.mosaic.sql.extensions.MosaicSQL")
         var spark = withConf(conf)
         spark.sparkContext.setLogLevel("ERROR")
-        it should behave like sqlRegister(MosaicContext.build(H3IndexSystem, JTS), spark)
+        it should behave like sqlRegister(MosaicContext.build(H3IndexSystem), spark)
 
         conf = new SparkConf(false)
             .set(MOSAIC_INDEX_SYSTEM, "BNG")
@@ -28,7 +28,7 @@ class TestSQLExtensions extends AnyFlatSpec with SQLExtensionsBehaviors with Spa
             .set("spark.sql.extensions", "com.databricks.labs.mosaic.sql.extensions.MosaicSQL")
         spark = withConf(conf)
         spark.sparkContext.setLogLevel("ERROR")
-        it should behave like sqlRegister(MosaicContext.build(BNGIndexSystem, JTS), spark)
+        it should behave like sqlRegister(MosaicContext.build(BNGIndexSystem), spark)
 
         conf = new SparkConf(false)
             .set(MOSAIC_INDEX_SYSTEM, "DummyIndex")
@@ -45,7 +45,7 @@ class TestSQLExtensions extends AnyFlatSpec with SQLExtensionsBehaviors with Spa
             .set("spark.sql.extensions", "com.databricks.labs.mosaic.sql.extensions.MosaicSQLDefault")
         spark = withConf(conf)
         spark.sparkContext.setLogLevel("ERROR")
-        it should behave like sqlRegister(MosaicContext.build(H3IndexSystem, JTS), spark)
+        it should behave like sqlRegister(MosaicContext.build(H3IndexSystem), spark)
 
     }
 
@@ -57,7 +57,7 @@ class TestSQLExtensions extends AnyFlatSpec with SQLExtensionsBehaviors with Spa
             .set("spark.sql.extensions", "com.databricks.labs.mosaic.sql.extensions.MosaicGDAL")
         val spark = withConf(conf)
         spark.sparkContext.setLogLevel("ERROR")
-        it should behave like mosaicGDAL(MosaicContext.build(H3IndexSystem, JTS), spark)
+        it should behave like mosaicGDAL(MosaicContext.build(H3IndexSystem), spark)
 
     }
 

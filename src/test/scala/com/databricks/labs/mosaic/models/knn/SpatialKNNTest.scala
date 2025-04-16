@@ -1,7 +1,7 @@
 package com.databricks.labs.mosaic.models.knn
 
-import com.databricks.labs.mosaic.core.geometry.api.JTS
 import com.databricks.labs.mosaic.core.index.{BNGIndexSystem, H3IndexSystem}
+import com.databricks.labs.mosaic.core.jts.JTS
 import com.databricks.labs.mosaic.functions.MosaicContext
 import com.databricks.labs.mosaic.{MOSAIC_GEOMETRY_API, MOSAIC_INDEX_SYSTEM, MOSAIC_RASTER_API}
 import com.databricks.labs.mosaic.sql.extensions.SQLExtensionsBehaviors
@@ -22,7 +22,7 @@ class SpatialKNNTest extends AnyFlatSpec with SpatialKNNBehaviors with SparkSuit
             .set("spark.sql.parquet.compression.codec", "uncompressed")
         var spark = withConf(conf)
         spark.sparkContext.setLogLevel("ERROR")
-        it should behave like noApproximation(MosaicContext.build(H3IndexSystem, JTS), spark)
+        it should behave like noApproximation(MosaicContext.build(H3IndexSystem), spark)
 
         conf = new SparkConf(false)
             .set(MOSAIC_INDEX_SYSTEM, "BNG")
@@ -33,7 +33,7 @@ class SpatialKNNTest extends AnyFlatSpec with SpatialKNNBehaviors with SparkSuit
             .set("spark.sql.parquet.compression.codec", "uncompressed")
         spark = withConf(conf)
         spark.sparkContext.setLogLevel("ERROR")
-        it should behave like noApproximation(MosaicContext.build(BNGIndexSystem, JTS), spark)
+        it should behave like noApproximation(MosaicContext.build(BNGIndexSystem), spark)
 
     }
 

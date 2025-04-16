@@ -1,6 +1,6 @@
 package com.databricks.labs.mosaic.expressions.raster
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
+import com.databricks.labs.mosaic.core.jts.JTS
 import com.databricks.labs.mosaic.core.raster.api.GDAL
 import com.databricks.labs.mosaic.core.types.model.MosaicRasterTile
 import com.databricks.labs.mosaic.expressions.base.{GenericExpressionFactory, WithExpressionInfo}
@@ -34,10 +34,8 @@ case class RST_RasterToWorldCoord(
         val gt = tile.getRaster.getRaster.GetGeoTransform()
 
         val (xGeo, yGeo) = GDAL.toWorldCoord(gt, x, y)
-
-        val geometryAPI = GeometryAPI(expressionConfig.getGeometryAPI)
-        val point = geometryAPI.fromCoords(Seq(xGeo, yGeo))
-        geometryAPI.serialize(point, StringType)
+        val point = JTS.fromCoords(Seq(xGeo, yGeo))
+        JTS.serialize(point, StringType)
     }
 
 }

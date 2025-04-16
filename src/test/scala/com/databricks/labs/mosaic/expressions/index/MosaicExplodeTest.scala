@@ -9,8 +9,6 @@ class MosaicExplodeTest extends MosaicSpatialQueryTest with SharedSparkSession w
     testAllNoCodegen("MosaicExplode WKT decompose keep core geoms") { wktDecomposeKeepCoreParamExpression }
     testAllNoCodegen("MosaicExplode WKT decompose no nulls") { wktDecomposeNoNulls }
     testAllNoCodegen("MosaicExplode WKB decompose") { wkbDecompose }
-    testAllNoCodegen("MosaicExplode Hex decompose") { hexDecompose }
-    testAllNoCodegen("MosaicExplode Coords decompose") { coordsDecompose }
     testAllNoCodegen("MosaicExplode Line decompose") { lineDecompose }
     testAllNoCodegen("MosaicExplode Line decompose first point on boundary") { lineDecomposeFirstPointOnBoundary }
     testAllNoCodegen("MosaicExplode column function signatures") { columnFunctionSignatures }

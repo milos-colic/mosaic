@@ -1,8 +1,6 @@
 package com.databricks.labs.mosaic.core.crs
 
 import java.io.InputStream
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
-
 import scala.io.Codec
 
 /**
@@ -62,11 +60,11 @@ object CRSBoundsProvider {
       * Creates an instance of [[CRSBoundsProvider]] based on a resource file
       * containing the bounds' lower left and upper right extreme points. The
       * lookup contains longitude and latitude bounds and reprojected equivalent
-      * values. The bounds values have been sourced from spatialreference.org.
+      * values. The bounds values have been sourced from spatial reference.org.
       * @see
       *   https://spatialreference.org/
       */
-    def apply(geometryAPI: GeometryAPI): CRSBoundsProvider = {
+    def apply(): CRSBoundsProvider = {
         val stream: InputStream = getClass.getResourceAsStream("/CRSBounds.csv")
         val lines: List[String] = scala.io.Source.fromInputStream(stream)(Codec.UTF8).getLines.toList.drop(1)
         val lookupItems = lines
@@ -77,7 +75,7 @@ object CRSBoundsProvider {
                 val (crsDataset, id) = (nameItems(0), nameItems(1).toInt)
                 val (x1, y1, x2, y2) = (lineItems(1).toDouble, lineItems(2).toDouble, lineItems(3).toDouble, lineItems(4).toDouble)
                 val (x3, y3, x4, y4) = (lineItems(5).toDouble, lineItems(6).toDouble, lineItems(7).toDouble, lineItems(8).toDouble)
-                (crsDataset, id) -> (CRSBounds(geometryAPI, x1, y1, x2, y2), CRSBounds(geometryAPI, x3, y3, x4, y4))
+                (crsDataset, id) -> (CRSBounds(x1, y1, x2, y2), CRSBounds(x3, y3, x4, y4))
             })
         val lookup = lookupItems.toMap
         CRSBoundsProvider(lookup)

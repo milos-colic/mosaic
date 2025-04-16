@@ -1,16 +1,14 @@
 package com.databricks.labs.mosaic.expressions.raster
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
 import com.databricks.labs.mosaic.functions.MosaicContext
 import org.apache.spark.sql.QueryTest
-import org.apache.spark.sql.functions._
 import org.scalatest.matchers.should.Matchers._
 
 trait RST_SeparateBandsBehaviors extends QueryTest {
 
-    def separateBandsBehavior(indexSystem: IndexSystem, geometryAPI: GeometryAPI): Unit = {
-        val mc = MosaicContext.build(indexSystem, geometryAPI)
+    def separateBandsBehavior(indexSystem: IndexSystem): Unit = {
+        val mc = MosaicContext.build(indexSystem)
         mc.register()
         val sc = spark
         import mc.functions._

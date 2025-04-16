@@ -1,17 +1,11 @@
 package com.databricks.labs.mosaic.core
 
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometry
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
-import com.databricks.labs.mosaic.core.geometry.linestring.MosaicLineString
-import com.databricks.labs.mosaic.core.geometry.multilinestring.MosaicMultiLineString
-import com.databricks.labs.mosaic.core.geometry.multipoint.MosaicMultiPoint
-import com.databricks.labs.mosaic.core.geometry.point.MosaicPoint
 import com.databricks.labs.mosaic.core.index.IndexSystem
-import com.databricks.labs.mosaic.core.types.model.{GeometryTypeEnum, MosaicChip}
+import com.databricks.labs.mosaic.core.jts._
 import com.databricks.labs.mosaic.core.types.model.GeometryTypeEnum._
+import com.databricks.labs.mosaic.core.types.model.{GeometryTypeEnum, MosaicChip}
 
 import scala.annotation.tailrec
-import scala.util.{Failure, Success, Try}
 
 /**
   * Single abstracted logic for mosaic fill via [[IndexSystem]]. [[IndexSystem]]
@@ -20,38 +14,37 @@ import scala.util.{Failure, Success, Try}
 object Mosaic {
 
     def getChips(
-        geometry: MosaicGeometry,
-        resolution: Int,
-        keepCoreGeom: Boolean,
-        indexSystem: IndexSystem,
-        geometryAPI: GeometryAPI
+                    geometry: JTSGeometry,
+                    resolution: Int,
+                    keepCoreGeom: Boolean,
+                    indexSystem: IndexSystem
     ): Seq[MosaicChip] = {
         GeometryTypeEnum.fromString(geometry.getGeometryType) match {
             case POINT           => pointChip(geometry, resolution, keepCoreGeom, indexSystem)
             case MULTIPOINT      => multiPointChips(geometry, resolution, keepCoreGeom, indexSystem)
-            case LINESTRING      => lineFill(geometry, resolution, indexSystem, geometryAPI)
-            case MULTILINESTRING => lineFill(geometry, resolution, indexSystem, geometryAPI)
-            case _               => mosaicFill(geometry, resolution, keepCoreGeom, indexSystem, geometryAPI)
+            case LINESTRING      => lineFill(geometry, resolution, indexSystem)
+            case MULTILINESTRING => lineFill(geometry, resolution, indexSystem)
+            case _               => mosaicFill(geometry, resolution, keepCoreGeom, indexSystem)
         }
     }
 
     def multiPointChips(
-        geometry: MosaicGeometry,
+        geometry: JTSGeometry,
         resolution: Int,
         keepCoreGeom: Boolean,
         indexSystem: IndexSystem
     ): Seq[MosaicChip] = {
-        val points = geometry.asInstanceOf[MosaicMultiPoint].asSeq
+        val points = geometry.asInstanceOf[JTSMultiPoint].asSeq
         points.flatMap(point => pointChip(point, resolution, keepCoreGeom, indexSystem))
     }
 
     def pointChip(
-        geometry: MosaicGeometry,
+        geometry: JTSGeometry,
         resolution: Int,
         keepCoreGeom: Boolean,
         indexSystem: IndexSystem
     ): Seq[MosaicChip] = {
-        val point = geometry.asInstanceOf[MosaicPoint]
+        val point = geometry.asInstanceOf[JTSPoint]
         val chipGeom = if (keepCoreGeom) point else null
         val cellId = indexSystem.pointToIndex(point.getX, point.getY, resolution)
         val chip = MosaicChip(isCore = false, Left(cellId), chipGeom)
@@ -59,14 +52,13 @@ object Mosaic {
     }
 
     def mosaicFill(
-        geometry: MosaicGeometry,
+        geometry: JTSGeometry,
         resolution: Int,
         keepCoreGeom: Boolean,
-        indexSystem: IndexSystem,
-        geometryAPI: GeometryAPI
+        indexSystem: IndexSystem
     ): Seq[MosaicChip] = {
 
-        val radius = indexSystem.getBufferRadius(geometry, resolution, geometryAPI)
+        val radius = indexSystem.getBufferRadius(geometry, resolution)
         // do not modify the radius
         val carvedGeometry = geometry.buffer(-radius)
 
@@ -89,21 +81,21 @@ object Mosaic {
         val carvedGeometryConstrained = indexSystem.alignToGrid(carvedGeometry)
         val borderGeometryConstrained = indexSystem.alignToGrid(borderGeometry)
 
-        val coreIndices = indexSystem.polyfill(carvedGeometryConstrained, resolution, geometryAPI)
-        val borderIndices = indexSystem.polyfill(borderGeometryConstrained, resolution, geometryAPI).diff(coreIndices)
+        val coreIndices = indexSystem.polyfill(carvedGeometryConstrained, resolution)
+        val borderIndices = indexSystem.polyfill(borderGeometryConstrained, resolution).diff(coreIndices)
 
-        val coreChips = indexSystem.getCoreChips(coreIndices, keepCoreGeom, geometryAPI)
-        val borderChips = indexSystem.getBorderChips(originalGeometryConstrained, borderIndices, keepCoreGeom, geometryAPI)
+        val coreChips = indexSystem.getCoreChips(coreIndices, keepCoreGeom)
+        val borderChips = indexSystem.getBorderChips(originalGeometryConstrained, borderIndices, keepCoreGeom)
 
         coreChips ++ borderChips
     }
 
-    def lineFill(geometry: MosaicGeometry, resolution: Int, indexSystem: IndexSystem, geometryAPI: GeometryAPI): Seq[MosaicChip] = {
+    def lineFill(geometry: JTSGeometry, resolution: Int, indexSystem: IndexSystem): Seq[MosaicChip] = {
         GeometryTypeEnum.fromString(geometry.getGeometryType) match {
-            case LINESTRING      => lineDecompose(geometry.asInstanceOf[MosaicLineString], resolution, indexSystem, geometryAPI)
+            case LINESTRING      => lineDecompose(geometry.asInstanceOf[JTSLineString], resolution, indexSystem)
             case MULTILINESTRING =>
-                val multiLine = geometry.asInstanceOf[MosaicMultiLineString]
-                multiLine.flatten.flatMap(line => lineDecompose(line.asInstanceOf[MosaicLineString], resolution, indexSystem, geometryAPI))
+                val multiLine = geometry.asInstanceOf[JTSMultiLineString]
+                multiLine.flatten.flatMap(line => lineDecompose(line.asInstanceOf[JTSLineString], resolution, indexSystem))
             case gt              => throw new Error(s"$gt not supported for line fill/decompose operation.")
         }
     }
@@ -115,13 +107,11 @@ object Mosaic {
       *   Resolution of the cells to get.
       * @param indexSystem
       *   Index system to use.
-      * @param geometryAPI
-      *   Geometry API to use.
       * @return
       *   A set of k ring cells for the geometry.
       */
-    def geometryKRing(geometry: MosaicGeometry, resolution: Int, k: Int, indexSystem: IndexSystem, geometryAPI: GeometryAPI): Set[Long] = {
-        val (coreCells, borderCells) = getCellSets(geometry, resolution, indexSystem, geometryAPI)
+    def geometryKRing(geometry: JTSGeometry, resolution: Int, k: Int, indexSystem: IndexSystem): Set[Long] = {
+        val (coreCells, borderCells) = getCellSets(geometry, resolution, indexSystem)
         val borderKRing = borderCells.flatMap(indexSystem.kRing(_, k))
         val kRing = coreCells ++ borderKRing
         kRing
@@ -134,16 +124,14 @@ object Mosaic {
       *   Resolution of the cells
       * @param indexSystem
       *   Index system to use
-      * @param geometryAPI
-      *   Geometry API to use
       * @return
       *   Set of cells that form a k loop around geometry
       */
-    def geometryKLoop(geometry: MosaicGeometry, resolution: Int, k: Int, indexSystem: IndexSystem, geometryAPI: GeometryAPI): Set[Long] = {
+    def geometryKLoop(geometry: JTSGeometry, resolution: Int, k: Int, indexSystem: IndexSystem): Set[Long] = {
         val n: Int = k - 1
         // This would be much more efficient if we could use the
         // pre-computed tessellation of the geometry for repeated calls.
-        val (coreCells, borderCells) = getCellSets(geometry, resolution, indexSystem, geometryAPI)
+        val (coreCells, borderCells) = getCellSets(geometry, resolution, indexSystem)
 
         // We use nRing as naming for kRing where k = n
         val borderNRing = borderCells.flatMap(indexSystem.kRing(_, n))
@@ -156,17 +144,16 @@ object Mosaic {
     }
 
     private def lineDecompose(
-        line: MosaicLineString,
+        line: JTSLineString,
         resolution: Int,
-        indexSystem: IndexSystem,
-        geometryAPI: GeometryAPI
+        indexSystem: IndexSystem
     ): Seq[MosaicChip] = {
         val start = line.getShells.head.asSeq.head
         val startIndex = indexSystem.pointToIndex(start.getX, start.getY, resolution)
 
         @tailrec
         def traverseLine(
-            line: MosaicLineString,
+            line: JTSLineString,
             queue: Seq[Long],
             traversed: Set[Long],
             chips: Seq[MosaicChip]
@@ -175,7 +162,7 @@ object Mosaic {
             val (newQueue, newChips) = queue.foldLeft(
               (Seq.empty[Long], chips)
             )((accumulator: (Seq[Long], Seq[MosaicChip]), current: Long) => {
-                val indexGeom = indexSystem.indexToGeometry(current, geometryAPI)
+                val indexGeom = indexSystem.indexToGeometry(current)
                 val lineSegment = line.intersection(indexGeom)
                 if (!lineSegment.isEmpty) {
                     val chip = MosaicChip(isCore = false, Left(current), lineSegment)
@@ -218,18 +205,15 @@ object Mosaic {
       *   Resolution of the cells.
       * @param indexSystem
       *   Index system to use.
-      * @param geometryAPI
-      *   Geometry API to use.
       * @return
       *   Tuple of core cells and border cells.
       */
     private def getCellSets(
-        geometry: MosaicGeometry,
+        geometry: JTSGeometry,
         resolution: Int,
-        indexSystem: IndexSystem,
-        geometryAPI: GeometryAPI
+        indexSystem: IndexSystem
     ): (Set[Long], Set[Long]) = {
-        val chips = Mosaic.getChips(geometry, resolution, keepCoreGeom = false, indexSystem, geometryAPI)
+        val chips = Mosaic.getChips(geometry, resolution, keepCoreGeom = false, indexSystem)
         val (coreChips, borderChips) = chips.partition(_.isCore)
 
         val coreCells = coreChips.map(_.cellIdAsLong(indexSystem)).toSet

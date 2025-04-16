@@ -1,17 +1,14 @@
 package com.databricks.labs.mosaic.expressions.geometry
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
-import com.databricks.labs.mosaic.core.geometry.linestring.MosaicLineString
-import com.databricks.labs.mosaic.core.geometry.multipoint.MosaicMultiPoint
-import com.databricks.labs.mosaic.core.geometry.point.MosaicPoint
+import com.databricks.labs.mosaic.core.jts.{JTS, JTSLineString, JTSMultiPoint, JTSPoint}
 import com.databricks.labs.mosaic.core.types.model.GeometryTypeEnum._
 import com.databricks.labs.mosaic.core.types.model.TriangulationSplitPointTypeEnum
 import com.databricks.labs.mosaic.expressions.base.{GenericExpressionFactory, WithExpressionInfo}
 import com.databricks.labs.mosaic.functions.MosaicExpressionConfig
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.FunctionRegistry.FunctionBuilder
-import org.apache.spark.sql.catalyst.expressions.{CollectionGenerator, Expression}
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
+import org.apache.spark.sql.catalyst.expressions.{CollectionGenerator, Expression}
 import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.types.{ArrayType, DataType, StructField, StructType}
 import org.apache.spark.unsafe.types.UTF8String
@@ -41,10 +38,6 @@ case class ST_Triangulate (
 
     def secondElementType: DataType = linesArray.dataType.asInstanceOf[ArrayType].elementType
 
-    def getGeometryAPI(expressionConfig: MosaicExpressionConfig): GeometryAPI = GeometryAPI(expressionConfig.getGeometryAPI)
-
-    def geometryAPI: GeometryAPI = getGeometryAPI(expressionConfig)
-
     override def eval(input: InternalRow): TraversableOnce[InternalRow] = {
         val pointsGeom =
             pointsArray
@@ -53,14 +46,14 @@ case class ST_Triangulate (
                 .toObjectArray(firstElementType)
                 .map({
                     obj =>
-                        val g = geometryAPI.geometry(obj, firstElementType)
+                        val g = JTS.geometry(obj, firstElementType)
                         g.getGeometryType.toUpperCase(Locale.ROOT) match {
-                            case "POINT" => g.asInstanceOf[MosaicPoint]
-                            case _ => throw new UnsupportedOperationException("ST_Triangulate requires Point geometry as masspoints input")
+                            case "POINT" => g.asInstanceOf[JTSPoint]
+                            case _ => throw new UnsupportedOperationException("ST_Triangulate requires Point geometry as mass points input")
                         }
                 })
 
-        val multiPointGeom = geometryAPI.fromSeq(pointsGeom, MULTIPOINT).asInstanceOf[MosaicMultiPoint]
+        val multiPointGeom = JTS.fromSeq(pointsGeom, MULTIPOINT).asInstanceOf[JTSMultiPoint]
         val linesGeom =
             linesArray
                 .eval(input)
@@ -68,9 +61,9 @@ case class ST_Triangulate (
                 .toObjectArray(secondElementType)
                 .map({
                     obj =>
-                        val g = geometryAPI.geometry(obj, secondElementType)
+                        val g = JTS.geometry(obj, secondElementType)
                             g.getGeometryType.toUpperCase(Locale.ROOT) match {
-                                case "LINESTRING" => g.asInstanceOf[MosaicLineString]
+                                case "LINESTRING" => g.asInstanceOf[JTSLineString]
                                 case _ => throw new UnsupportedOperationException("ST_Triangulate requires LINESTRING geometry as breakline input")
                             }
                 })
@@ -83,7 +76,7 @@ case class ST_Triangulate (
         val triangles =  multiPointGeom.triangulate(linesGeom, mergeToleranceVal, snapToleranceVal, splitPointFinderVal)
 
         val outputGeoms = triangles.map(
-            geometryAPI.serialize(_, firstElementType)
+            JTS.serialize(_, firstElementType)
         )
         val outputRows = outputGeoms.map(t => InternalRow.fromSeq(Seq(t)))
         outputRows

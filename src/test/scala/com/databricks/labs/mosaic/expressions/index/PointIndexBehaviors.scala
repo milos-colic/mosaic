@@ -1,8 +1,8 @@
 package com.databricks.labs.mosaic.expressions.index
 
 import java.nio.file.Files
-
 import com.databricks.labs.mosaic.core.index._
+import com.databricks.labs.mosaic.expressions.SpatialSQLAPIsMock.{st_centroid, st_geomfromwkt, st_point, st_x, st_y}
 import com.databricks.labs.mosaic.functions.MosaicContext
 import com.databricks.labs.mosaic.test.mocks.getBoroughs
 import com.databricks.labs.mosaic.test.MosaicSpatialQueryTest
@@ -28,8 +28,8 @@ trait PointIndexBehaviors extends MosaicSpatialQueryTest {
         val mosaics = boroughs
             .withColumn("centroid", st_centroid(col("wkt")))
             .select(
-              point_index_geom(col("centroid"), resolution),
-              point_index_lonlat(st_x(col("centroid")), st_y(col("centroid")), resolution)
+              grid_pointascellid(col("centroid"), resolution),
+              grid_longlatascellid(st_x(col("centroid")), st_y(col("centroid")), resolution)
             )
             .collect()
 
@@ -39,8 +39,8 @@ trait PointIndexBehaviors extends MosaicSpatialQueryTest {
 
         val mosaics2 = spark
             .sql(s"""
-                    |select point_index_geom(centroid, $resolution),
-                    |point_index_lonlat(st_x(centroid), st_y(centroid), $resolution)
+                    |select grid_pointascellid(centroid, $resolution),
+                    |grid_longlatascellid(st_x(centroid), st_y(centroid), $resolution)
                     |from boroughs
                     |""".stripMargin)
             .collect()
@@ -82,8 +82,8 @@ trait PointIndexBehaviors extends MosaicSpatialQueryTest {
 
         val mosaics2 = spark
             .sql(s"""
-                    |select point_index_geom(centroid, $resolution2),
-                    |point_index_lonlat(st_x(centroid), st_y(centroid), $resolution2)
+                    |select grid_pointascellid(centroid, $resolution2),
+                    |grid_longlatascellid(st_x(centroid), st_y(centroid), $resolution2)
                     |from boroughs
                     |""".stripMargin)
             .collect()
@@ -95,15 +95,12 @@ trait PointIndexBehaviors extends MosaicSpatialQueryTest {
         spark.sparkContext.setLogLevel("ERROR")
         val mc = mosaicContext
         mc.register(spark)
-        import mc.functions._
-
         val indexSystem = mc.getIndexSystem
-        val geometryAPI = mc.getGeometryAPI
 
         indexSystem match {
             case BNGIndexSystem =>
                 val lonLatIndex = PointIndexLonLat(lit(10000.0).expr, lit(10000.0).expr, lit("100m").expr, indexSystem)
-                val pointIndex = PointIndexGeom(st_point(lit(10000.0), lit(10000.0)).expr, lit(5).expr, indexSystem, geometryAPI.name)
+                val pointIndex = PointIndexGeom(st_point(lit(10000.0), lit(10000.0)).expr, lit(5).expr, indexSystem)
                 lonLatIndex.inputTypes should contain theSameElementsAs Seq(DoubleType, DoubleType, StringType, BooleanType)
                 lonLatIndex.dataType shouldEqual StringType
                 lonLatIndex
@@ -117,7 +114,7 @@ trait PointIndexBehaviors extends MosaicSpatialQueryTest {
                     .left shouldEqual st_point(lit(10001.0), lit(10000.0)).expr
             case _              =>
                 val lonLatIndex = PointIndexLonLat(lit(10.0).expr, lit(10.0).expr, lit(10).expr, indexSystem)
-                val pointIndex = PointIndexGeom(st_point(lit(10.0), lit(10.0)).expr, lit(10).expr, indexSystem, geometryAPI.name)
+                val pointIndex = PointIndexGeom(st_point(lit(10.0), lit(10.0)).expr, lit(10).expr, indexSystem)
                 lonLatIndex.inputTypes should contain theSameElementsAs Seq(DoubleType, DoubleType, IntegerType, BooleanType)
                 lonLatIndex.dataType shouldEqual LongType
                 lonLatIndex
@@ -132,15 +129,15 @@ trait PointIndexBehaviors extends MosaicSpatialQueryTest {
         }
 
         val badExprLonLat = PointIndexLonLat(lit(true).expr, lit(10000.0).expr, lit(5).expr, indexSystem)
-        val badExprPoint = PointIndexGeom(lit("POLYGON EMPTY").expr, lit(5).expr, indexSystem, geometryAPI.name)
+        val badExprPoint = PointIndexGeom(lit("POLYGON EMPTY").expr, lit(5).expr, indexSystem)
         an[Error] should be thrownBy badExprLonLat.inputTypes
         an[Exception] should be thrownBy badExprPoint.nullSafeEval(UTF8String.fromString("POLYGON EMPTY"), 5)
 
         // legacy API def tests
-        noException should be thrownBy mc.functions.point_index_geom(lit(""), lit(5))
-        noException should be thrownBy mc.functions.point_index_geom(lit(""), 5)
-        noException should be thrownBy mc.functions.point_index_lonlat(lit(1), lit(1), lit(5))
-        noException should be thrownBy mc.functions.point_index_lonlat(lit(1), lit(1), 5)
+        noException should be thrownBy mc.functions.grid_pointascellid(lit(""), lit(5))
+        noException should be thrownBy mc.functions.grid_pointascellid(lit(""), 5)
+        noException should be thrownBy mc.functions.grid_longlatascellid(lit(1), lit(1), lit(5))
+        noException should be thrownBy mc.functions.grid_longlatascellid(lit(1), lit(1), 5)
     }
 
     def issue_383(mosaicContext: MosaicContext): Unit = {
@@ -157,12 +154,12 @@ trait PointIndexBehaviors extends MosaicSpatialQueryTest {
             .withColumn("geom", st_geomfromwkt(col("wkt")))
 
         val dbDir = Files.createTempDirectory(name)
-        spark.sql(s"DROP DATABASE IF EXISTS ${name} CASCADE")
-        spark.sql(s"CREATE DATABASE IF NOT EXISTS ${name} LOCATION '${dbDir}'")
-        df.write.saveAsTable(s"${name}.${name}")
+        spark.sql(s"DROP DATABASE IF EXISTS $name CASCADE")
+        spark.sql(s"CREATE DATABASE IF NOT EXISTS $name LOCATION '$dbDir'")
+        df.write.saveAsTable(s"$name.$name")
 
         val df2 = spark
-            .sql(s"SELECT * FROM ${name}.${name}")
+            .sql(s"SELECT * FROM $name.$name")
             .select(grid_pointascellid(col("geom"), lit(resolution)))
 
         df.collect().length shouldEqual df2.collect().length

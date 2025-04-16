@@ -1,7 +1,7 @@
 package com.databricks.labs.mosaic.core.types.model
 
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometry
 import com.databricks.labs.mosaic.core.index.IndexSystem
+import com.databricks.labs.mosaic.core.jts.JTSGeometry
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.types.{LongType, StringType}
 import org.apache.spark.unsafe.types.UTF8String
@@ -17,10 +17,10 @@ import org.apache.spark.unsafe.types.UTF8String
   * @param geom
   *   Geometry instance if the chip is a border chip.
   */
-case class MosaicChip(isCore: Boolean, index: Either[Long, String], geom: MosaicGeometry) {
+case class MosaicChip(isCore: Boolean, index: Either[Long, String], geom: JTSGeometry) {
 
     /**
-      * Indicates whether the chip is outside of the representation of the
+      * Indicates whether the chip is outside the representation of the
       * geometry it was generated to represent (ie false positive index).
       */
     def isEmpty: Boolean = !isCore & Option(geom).forall(_.isEmpty)
@@ -36,8 +36,8 @@ case class MosaicChip(isCore: Boolean, index: Either[Long, String], geom: Mosaic
       */
     def formatCellId(indexSystem: IndexSystem): MosaicChip = {
         (indexSystem.getCellIdDataType, index) match {
-            case (_: LongType, Left(value))    => this
-            case (_: StringType, Right(value)) => this
+            case (_: LongType, Left(_))    => this
+            case (_: StringType, Right(_)) => this
             case (_: LongType, Right(value))   => this.copy(index = Left(indexSystem.parse(value)))
             case (_: StringType, Left(value))  => this.copy(index = Right(indexSystem.format(value)))
             case _                             => throw new IllegalArgumentException("Invalid cell id data type")

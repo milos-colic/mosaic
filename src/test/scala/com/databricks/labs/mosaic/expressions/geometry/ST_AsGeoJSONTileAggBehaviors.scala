@@ -4,8 +4,8 @@ import com.databricks.labs.mosaic.functions.MosaicContext
 import com.databricks.labs.mosaic.test.{MosaicSpatialQueryTest, mocks}
 import org.apache.spark.sql.functions._
 import org.gdal.ogr.ogr
-import org.scalatest.matchers.must.Matchers.noException
 import org.scalatest.matchers.should.Matchers.{be, convertToAnyShouldWrapper}
+import com.databricks.labs.mosaic.expressions.SpatialSQLAPIsMock._
 
 trait ST_AsGeoJSONTileAggBehaviors extends MosaicSpatialQueryTest {
 
@@ -28,14 +28,14 @@ trait ST_AsGeoJSONTileAggBehaviors extends MosaicSpatialQueryTest {
             .collect()
 
         val row = result.head
-        
+
         val payload = row.getAs[String]("geojson")
-        
+
         val ds = ogr.GetDriverByName("GeoJSON").Open(payload)
-        
+
         ds.GetLayerCount should be(1L)
         ds.GetLayer(0).GetFeatureCount should be > 0L
-        
+
     }
 
 }

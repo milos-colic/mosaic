@@ -1,7 +1,6 @@
 package com.databricks.labs.mosaic.expressions.raster
 
 import com.databricks.labs.mosaic.{MOSAIC_RASTER_READ_IN_MEMORY, MOSAIC_RASTER_READ_STRATEGY}
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
 import com.databricks.labs.mosaic.functions.MosaicContext
 import org.apache.spark.sql.QueryTest
@@ -10,8 +9,8 @@ import org.scalatest.matchers.should.Matchers._
 
 trait RST_SetSRIDBehaviors extends QueryTest {
 
-    def setSRIDBehavior(indexSystem: IndexSystem, geometryAPI: GeometryAPI): Unit = {
-        val mc = MosaicContext.build(indexSystem, geometryAPI)
+    def setSRIDBehavior(indexSystem: IndexSystem): Unit = {
+        val mc = MosaicContext.build(indexSystem)
         mc.register()
         val sc = spark
         import mc.functions._

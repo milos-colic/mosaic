@@ -19,7 +19,6 @@ trait IndexGeometryBehaviors extends MosaicSpatialQueryTest {
         mc.register(spark)
 
         val indexSystem = mc.getIndexSystem
-        val geometryAPIName = mc.getGeometryAPI.name
 
         val gridCellLong = MosaicContext.indexSystem match {
             case BNGIndexSystem => lit(1050138790L).expr
@@ -32,22 +31,22 @@ trait IndexGeometryBehaviors extends MosaicSpatialQueryTest {
             case _ => lit("0").expr
         }
 
-        IndexGeometry(gridCellStr, lit("WKT").expr, indexSystem, geometryAPIName).dataType shouldEqual StringType
-        IndexGeometry(gridCellStr, lit("WKB").expr, indexSystem, geometryAPIName).dataType shouldEqual BinaryType
-        IndexGeometry(gridCellStr, lit("GEOJSON").expr, indexSystem, geometryAPIName).dataType shouldEqual StringType
-        IndexGeometry(gridCellStr, lit("COORDS").expr, indexSystem, geometryAPIName).dataType shouldEqual InternalGeometryType
-        an[Error] should be thrownBy IndexGeometry(gridCellStr, lit("BAD FORMAT").expr, indexSystem, geometryAPIName).dataType
+        IndexGeometry(gridCellStr, lit("WKT").expr, indexSystem).dataType shouldEqual StringType
+        IndexGeometry(gridCellStr, lit("WKB").expr, indexSystem).dataType shouldEqual BinaryType
+        IndexGeometry(gridCellStr, lit("GEOJSON").expr, indexSystem).dataType shouldEqual StringType
+        IndexGeometry(gridCellStr, lit("COORDS").expr, indexSystem).dataType shouldEqual InternalGeometryType
+        an[Error] should be thrownBy IndexGeometry(gridCellStr, lit("BAD FORMAT").expr, indexSystem).dataType
 
-        IndexGeometry(gridCellLong, lit("WKT").expr, indexSystem, geometryAPIName).dataType shouldEqual StringType
-        IndexGeometry(gridCellLong, lit("WKB").expr, indexSystem, geometryAPIName).dataType shouldEqual BinaryType
-        IndexGeometry(gridCellLong, lit("GEOJSON").expr, indexSystem, geometryAPIName).dataType shouldEqual StringType
-        IndexGeometry(gridCellLong, lit("COORDS").expr, indexSystem, geometryAPIName).dataType shouldEqual InternalGeometryType
-        an[Error] should be thrownBy IndexGeometry(gridCellLong, lit("BAD FORMAT").expr, indexSystem, geometryAPIName).dataType
+        IndexGeometry(gridCellLong, lit("WKT").expr, indexSystem).dataType shouldEqual StringType
+        IndexGeometry(gridCellLong, lit("WKB").expr, indexSystem).dataType shouldEqual BinaryType
+        IndexGeometry(gridCellLong, lit("GEOJSON").expr, indexSystem).dataType shouldEqual StringType
+        IndexGeometry(gridCellLong, lit("COORDS").expr, indexSystem).dataType shouldEqual InternalGeometryType
+        an[Error] should be thrownBy IndexGeometry(gridCellLong, lit("BAD FORMAT").expr, indexSystem).dataType
 
-        val longIDGeom = IndexGeometry(gridCellLong, lit("WKT").expr, indexSystem, geometryAPIName)
-        val intIDGeom = IndexGeometry(Column(gridCellLong).cast(IntegerType).expr, lit("WKT").expr, indexSystem, geometryAPIName)
-        val strIDGeom = IndexGeometry(gridCellStr, lit("WKT").expr, indexSystem, geometryAPIName)
-        val badIDGeom = IndexGeometry(lit(true).expr, lit("WKT").expr, indexSystem, geometryAPIName)
+        val longIDGeom = IndexGeometry(gridCellLong, lit("WKT").expr, indexSystem)
+        val intIDGeom = IndexGeometry(Column(gridCellLong).cast(IntegerType).expr, lit("WKT").expr, indexSystem)
+        val strIDGeom = IndexGeometry(gridCellStr, lit("WKT").expr, indexSystem)
+        val badIDGeom = IndexGeometry(lit(true).expr, lit("WKT").expr, indexSystem)
 
         longIDGeom.checkInputDataTypes() shouldEqual TypeCheckResult.TypeCheckSuccess
         intIDGeom.checkInputDataTypes() shouldEqual TypeCheckResult.TypeCheckSuccess
@@ -59,15 +58,15 @@ trait IndexGeometryBehaviors extends MosaicSpatialQueryTest {
         // legacy API def tests
         MosaicContext.indexSystem match {
             case BNGIndexSystem =>
-                noException should be thrownBy mc.functions.index_geometry(lit(1050138790L))
+                noException should be thrownBy mc.functions.grid_boundaryaswkb(lit(1050138790L))
                 noException should be thrownBy mc.functions.grid_boundary(lit(1050138790L), lit("WKT"))
                 noException should be thrownBy mc.functions.grid_boundary(lit(1050138790L), "WKB")
             case H3IndexSystem  =>
-                noException should be thrownBy mc.functions.index_geometry(lit(623060282076758015L))
+                noException should be thrownBy mc.functions.grid_boundaryaswkb(lit(623060282076758015L))
                 noException should be thrownBy mc.functions.grid_boundary(lit(623060282076758015L), lit("WKT"))
                 noException should be thrownBy mc.functions.grid_boundary(lit(623060282076758015L), "WKB")
             case _ =>
-                noException should be thrownBy mc.functions.index_geometry(lit(0L))
+                noException should be thrownBy mc.functions.grid_boundaryaswkb(lit(0L))
                 noException should be thrownBy mc.functions.grid_boundary(lit(0L), lit("WKT"))
                 noException should be thrownBy mc.functions.grid_boundary(lit(0L), "WKB")
         }

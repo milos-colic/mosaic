@@ -1,18 +1,17 @@
 package com.databricks.labs.mosaic.expressions.raster
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
 import com.databricks.labs.mosaic.functions.MosaicContext
 import org.apache.spark.sql.QueryTest
-import org.apache.spark.sql.functions.{collect_list, collect_set}
+import org.apache.spark.sql.functions.collect_list
 import org.scalatest.matchers.should.Matchers._
 
 trait RST_CombineAvgBehaviors extends QueryTest {
 
     // noinspection MapGetGet
-    def behaviors(indexSystem: IndexSystem, geometryAPI: GeometryAPI): Unit = {
+    def behaviors(indexSystem: IndexSystem): Unit = {
         spark.sparkContext.setLogLevel("ERROR")
-        val mc = MosaicContext.build(indexSystem, geometryAPI)
+        val mc = MosaicContext.build(indexSystem)
         mc.register()
         val sc = spark
         import mc.functions._

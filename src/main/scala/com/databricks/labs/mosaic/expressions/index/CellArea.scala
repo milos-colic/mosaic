@@ -1,15 +1,7 @@
 package com.databricks.labs.mosaic.expressions.index
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
-import org.apache.spark.sql.catalyst.expressions.{
-    ExpectsInputTypes,
-    Expression,
-    ExpressionDescription,
-    ExpressionInfo,
-    NullIntolerant,
-    UnaryExpression
-}
+import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
 import org.apache.spark.sql.types._
 
@@ -22,13 +14,11 @@ import org.apache.spark.sql.types._
   """,
   since = "1.0"
 )
-case class CellArea(cellId: Expression, indexSystem: IndexSystem, geometryAPIName: String)
+case class CellArea(cellId: Expression, indexSystem: IndexSystem)
     extends UnaryExpression
       with ExpectsInputTypes
       with NullIntolerant
       with CodegenFallback {
-
-    val geometryAPI: GeometryAPI = GeometryAPI(geometryAPIName)
 
     // noinspection DuplicatedCode
     override def inputTypes: Seq[DataType] =
@@ -52,10 +42,8 @@ case class CellArea(cellId: Expression, indexSystem: IndexSystem, geometryAPINam
       * Generates a set of indices corresponding to kring call over the input
       * cell id.
       *
-      * @param input1
+      * @param input
       *   Any instance containing the cell id.
-      * @param input2
-      *   Any instance containing the k.
       * @return
       *   A set of indices.
       */
@@ -68,7 +56,7 @@ case class CellArea(cellId: Expression, indexSystem: IndexSystem, geometryAPINam
 
     override def makeCopy(newArgs: Array[AnyRef]): Expression = {
         val asArray = newArgs.take(1).map(_.asInstanceOf[Expression])
-        val res = CellArea(asArray(0), indexSystem, geometryAPIName)
+        val res = CellArea(asArray(0), indexSystem)
         res.copyTagsFrom(this)
         res
     }

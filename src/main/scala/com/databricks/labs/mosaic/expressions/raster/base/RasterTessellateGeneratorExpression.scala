@@ -1,6 +1,5 @@
 package com.databricks.labs.mosaic.expressions.raster.base
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.{IndexSystem, IndexSystemFactory}
 import com.databricks.labs.mosaic.core.raster.io.RasterCleaner
 import com.databricks.labs.mosaic.core.types.RasterTileType
@@ -44,8 +43,6 @@ abstract class RasterTessellateGeneratorExpression[T <: Expression: ClassTag](
     val uuid: String = java.util.UUID.randomUUID().toString.replace("-", "_")
 
     val indexSystem: IndexSystem = IndexSystemFactory.getIndexSystem(expressionConfig.getIndexSystem)
-
-    protected val geometryAPI: GeometryAPI = GeometryAPI.apply(expressionConfig.getGeometryAPI)
 
     override def position: Boolean = false
 

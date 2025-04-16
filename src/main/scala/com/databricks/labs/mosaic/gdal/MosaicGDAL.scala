@@ -1,6 +1,5 @@
 package com.databricks.labs.mosaic.gdal
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystemFactory
 import com.databricks.labs.mosaic.{MOSAIC_RASTER_BLOCKSIZE_DEFAULT, MOSAIC_RASTER_CHECKPOINT, MOSAIC_RASTER_CHECKPOINT_DEFAULT, MOSAIC_RASTER_USE_CHECKPOINT, MOSAIC_RASTER_USE_CHECKPOINT_DEFAULT, MOSAIC_TEST_MODE}
 import com.databricks.labs.mosaic.functions.{MosaicContext, MosaicExpressionConfig}
@@ -20,13 +19,12 @@ import scala.util.Try
 object MosaicGDAL extends Logging {
 
     val defaultBlockSize = 1024
-    val vrtBlockSize = 128 // This is a must value for VRTs before GDAL 3.7
     var blockSize: Int = MOSAIC_RASTER_BLOCKSIZE_DEFAULT.toInt
 
     // noinspection ScalaWeakerAccess
     val GDAL_ENABLED = "spark.mosaic.gdal.native.enabled"
     var isEnabled = false
-    var checkpointPath: String = _
+    private var checkpointPath: String = _
     var useCheckpoint: Boolean = _
 
 
@@ -46,7 +44,7 @@ object MosaicGDAL extends Logging {
     }
 
     /** Returns true if GDAL is enabled. */
-    def wasEnabled(spark: SparkSession): Boolean =
+    private def wasEnabled(spark: SparkSession): Boolean =
         spark.conf.get(GDAL_ENABLED, "false").toBoolean || sys.env.getOrElse("GDAL_ENABLED", "false").toBoolean
 
     /** Configures the GDAL environment. */
@@ -237,8 +235,7 @@ object MosaicGDAL extends Logging {
         if (!MosaicContext.checkContext) {
             val mosaicConfig = MosaicExpressionConfig(spark)
             val indexSystem = IndexSystemFactory.getIndexSystem(mosaicConfig.getIndexSystem)
-            val geometryAPI =  GeometryAPI.apply(mosaicConfig.getGeometryAPI)
-            MosaicContext.build(indexSystem, geometryAPI)
+            MosaicContext.build(indexSystem)
         }
         val mc = MosaicContext.context()
         mc.register(spark)
@@ -246,7 +243,7 @@ object MosaicGDAL extends Logging {
     }
 
     /** Loads the shared objects required for GDAL. */
-    private def loadSharedObjects(): Unit = {
+    def loadSharedObjects(): Unit = {
         loadOrNOOP("/usr/lib/gdalalljni.so")
     }
 

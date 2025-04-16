@@ -1,7 +1,7 @@
 package com.databricks.labs.mosaic.expressions.geometry
 
 import com.databricks.labs.mosaic.core.crs.CRSBoundsProvider
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometry
+import com.databricks.labs.mosaic.core.jts.JTSGeometry
 import com.databricks.labs.mosaic.expressions.base.{GenericExpressionFactory, WithExpressionInfo}
 import com.databricks.labs.mosaic.expressions.geometry.base.UnaryVector2ArgExpression
 import com.databricks.labs.mosaic.functions.MosaicExpressionConfig
@@ -23,7 +23,7 @@ import java.util.Locale
   * @param which
   *   The input which expression, either bounds or reprojected_bounds .
   * @param expressionConfig
-  *   Mosaic execution context, e.g. the geometry API, index system, etc.
+  *   Mosaic execution context, e.g. index system, etc.
   *   Additional arguments for the expression (expressionConfigs).
   */
 case class ST_HasValidCoordinates(
@@ -40,11 +40,11 @@ case class ST_HasValidCoordinates(
     ) {
 
     @transient
-    val crsBoundsProvider: CRSBoundsProvider = CRSBoundsProvider(geometryAPI)
+    val crsBoundsProvider: CRSBoundsProvider = CRSBoundsProvider()
 
     override def dataType: DataType = BooleanType
 
-    override def geometryTransform(geometry: MosaicGeometry, arg1: Any, arg2: Any): Any = {
+    override def geometryTransform(geometry: JTSGeometry, arg1: Any, arg2: Any): Any = {
         val crsCode = arg1.asInstanceOf[UTF8String].toString
         val which = arg2.asInstanceOf[UTF8String].toString.toLowerCase(Locale.ROOT)
         geometry.hasValidCoords(crsBoundsProvider, crsCode, which)
@@ -53,7 +53,6 @@ case class ST_HasValidCoordinates(
     override def geometryCodeGen(geometryRef: String, arg1Ref: String, arg2Ref: String, ctx: CodegenContext): (String, String) = {
         val resultRef = ctx.freshName("result")
         val crsBoundsProviderRef = ctx.freshName("crsBoundsProvider")
-        val geometryAPIRef = ctx.freshName("geometryAPI")
 
         ctx.addImmutableStateIfNotExists(
           CRSBoundsProviderClass,
@@ -62,8 +61,7 @@ case class ST_HasValidCoordinates(
 
         ctx.addPartitionInitializationStatement(
           s"""
-             |final $geometryAPIClass $geometryAPIRef = $geometryAPIClass.apply("${geometryAPI.name}");
-             |$crsBoundsProviderRef = $CRSBoundsProviderClass.apply($geometryAPIRef);
+             |$crsBoundsProviderRef = $CRSBoundsProviderClass.apply();
              |""".stripMargin
         )
 

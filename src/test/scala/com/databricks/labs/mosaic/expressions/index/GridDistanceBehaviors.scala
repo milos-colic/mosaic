@@ -1,8 +1,9 @@
 package com.databricks.labs.mosaic.expressions.index
 
 import com.databricks.labs.mosaic.core.index._
+import com.databricks.labs.mosaic.expressions.SpatialSQLAPIsMock.st_centroid
 import com.databricks.labs.mosaic.functions.MosaicContext
-import com.databricks.labs.mosaic.test.{mocks, MosaicSpatialQueryTest}
+import com.databricks.labs.mosaic.test.{MosaicSpatialQueryTest, mocks}
 import com.databricks.labs.mosaic.test.mocks.getBoroughs
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.{col, lit}
@@ -66,10 +67,9 @@ trait GridDistanceBehaviors extends MosaicSpatialQueryTest {
         val wkt = mocks.getWKTRowsDf(mc.getIndexSystem).limit(1).select("wkt").as[String].collect().head
 
         val gridDistanceExpr = GridDistance(
-          mc.functions.grid_pointascellid(mc.functions.st_centroid(lit(wkt)), lit(4)).expr,
-          mc.functions.grid_pointascellid(mc.functions.st_centroid(lit(wkt)), lit(4)).expr,
-          mc.getIndexSystem,
-          mc.getGeometryAPI.name
+          mc.functions.grid_pointascellid(st_centroid(lit(wkt)), lit(4)).expr,
+          mc.functions.grid_pointascellid(st_centroid(lit(wkt)), lit(4)).expr,
+          mc.getIndexSystem
         )
 
         mc.getIndexSystem match {

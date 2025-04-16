@@ -1,26 +1,24 @@
 package com.databricks.labs.mosaic.codegen.format
 
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometryJTS
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
+import com.databricks.labs.mosaic.core.jts.JTSGeometry
 import com.databricks.labs.mosaic.core.types.InternalGeometryType
+import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
+import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext}
+import org.apache.spark.sql.types.{BinaryType, StringType}
 import org.locationtech.jts.geom.Geometry
 import org.locationtech.jts.io._
 import org.locationtech.jts.io.geojson.{GeoJsonReader, GeoJsonWriter}
 
-import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
-import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, CodeGenerator}
-import org.apache.spark.sql.types.{BinaryType, StringType}
-
 object MosaicGeometryIOCodeGenJTS extends GeometryIOCodeGen {
 
-    override def fromWKT(ctx: CodegenContext, eval: String, geometryAPI: GeometryAPI): (String, String) = {
+    override def fromWKT(ctx: CodegenContext, eval: String): (String, String) = {
         val inputGeom = ctx.freshName("inputGeom")
         val jtsGeom = classOf[Geometry].getName
         val wktReader = classOf[WKTReader].getName
         (s"""$jtsGeom $inputGeom = new $wktReader().read($eval.toString());""", inputGeom)
     }
 
-    override def fromWKB(ctx: CodegenContext, eval: String, geometryAPI: GeometryAPI): (String, String) = {
+    override def fromWKB(ctx: CodegenContext, eval: String): (String, String) = {
         val inputGeom = ctx.freshName("inputGeom")
         val binaryJavaType = CodeGenerator.javaType(BinaryType)
         val jtsGeom = classOf[Geometry].getName
@@ -28,7 +26,7 @@ object MosaicGeometryIOCodeGenJTS extends GeometryIOCodeGen {
         (s"""$jtsGeom $inputGeom = new $wkbReader().read(($binaryJavaType)($eval));""", inputGeom)
     }
 
-    override def fromJSON(ctx: CodegenContext, eval: String, geometryAPI: GeometryAPI): (String, String) = {
+    override def fromJSON(ctx: CodegenContext, eval: String): (String, String) = {
         val inputGeom = ctx.freshName("inputGeom")
         val stringJavaType = CodeGenerator.javaType(StringType)
         val tmpHolder = ctx.freshName("tmpHolder")
@@ -45,7 +43,7 @@ object MosaicGeometryIOCodeGenJTS extends GeometryIOCodeGen {
     }
 
     // noinspection DuplicatedCode
-    override def fromHex(ctx: CodegenContext, eval: String, geometryAPI: GeometryAPI): (String, String) = {
+    override def fromHex(ctx: CodegenContext, eval: String): (String, String) = {
         val inputGeom = ctx.freshName("inputGeom")
         val stringJavaType = CodeGenerator.javaType(StringType)
         val tmpHolder = ctx.freshName("tmpHolder")
@@ -65,10 +63,10 @@ object MosaicGeometryIOCodeGenJTS extends GeometryIOCodeGen {
     }
 
     // noinspection DuplicatedCode
-    override def fromInternal(ctx: CodegenContext, eval: String, geometryAPI: GeometryAPI): (String, String) = {
+    override def fromInternal(ctx: CodegenContext, eval: String): (String, String) = {
         val geometryClass = classOf[Geometry].getName
         val geometry = ctx.freshName("geometry")
-        val mosaicGeometryClass = classOf[MosaicGeometryJTS].getName
+        val mosaicGeometryClass = classOf[JTSGeometry].getName
 
         (
           s"""
@@ -78,7 +76,7 @@ object MosaicGeometryIOCodeGenJTS extends GeometryIOCodeGen {
         )
     }
 
-    override def toWKT(ctx: CodegenContext, eval: String, geometryAPI: GeometryAPI): (String, String) = {
+    override def toWKT(ctx: CodegenContext, eval: String): (String, String) = {
         val outputGeom = ctx.freshName("outputGeom")
         val javaStringType = CodeGenerator.javaType(StringType)
         val wktWriterClass = classOf[WKTWriter].getName
@@ -90,7 +88,7 @@ object MosaicGeometryIOCodeGenJTS extends GeometryIOCodeGen {
         )
     }
 
-    override def toWKB(ctx: CodegenContext, eval: String, geometryAPI: GeometryAPI): (String, String) = {
+    override def toWKB(ctx: CodegenContext, eval: String): (String, String) = {
         val outputGeom = ctx.freshName("outputGeom")
         val javaBinaryType = CodeGenerator.javaType(BinaryType)
         val wkbWriterClass = classOf[WKBWriter].getName
@@ -103,7 +101,7 @@ object MosaicGeometryIOCodeGenJTS extends GeometryIOCodeGen {
     }
 
     // noinspection DuplicatedCode
-    override def toHEX(ctx: CodegenContext, eval: String, geometryAPI: GeometryAPI): (String, String) = {
+    override def toHEX(ctx: CodegenContext, eval: String): (String, String) = {
         val outputGeom = ctx.freshName("outputGeom")
         val binaryJavaType = CodeGenerator.javaType(BinaryType)
         val stringJavaType = CodeGenerator.javaType(StringType)
@@ -128,7 +126,7 @@ object MosaicGeometryIOCodeGenJTS extends GeometryIOCodeGen {
     }
 
     // noinspection DuplicatedCode
-    override def toJSON(ctx: CodegenContext, eval: String, geometryAPI: GeometryAPI): (String, String) = {
+    override def toJSON(ctx: CodegenContext, eval: String): (String, String) = {
         val outputGeom = ctx.freshName("outputGeom")
         val stringJavaType = CodeGenerator.javaType(StringType)
         val tmpHolder = ctx.freshName("tmpHolder")
@@ -148,7 +146,7 @@ object MosaicGeometryIOCodeGenJTS extends GeometryIOCodeGen {
         )
     }
 
-    override def toGeoJSON(ctx: CodegenContext, eval: String, geometryAPI: GeometryAPI): (String, String) = {
+    override def toGeoJSON(ctx: CodegenContext, eval: String): (String, String) = {
         val outputGeom = ctx.freshName("outputGeom")
         val javaStringType = CodeGenerator.javaType(StringType)
         val geoJsonWriterClass = classOf[GeoJsonWriter].getName
@@ -160,9 +158,9 @@ object MosaicGeometryIOCodeGenJTS extends GeometryIOCodeGen {
         )
     }
 
-    override def toInternal(ctx: CodegenContext, eval: String, geometryAPI: GeometryAPI): (String, String) = {
+    override def toInternal(ctx: CodegenContext, eval: String): (String, String) = {
         val outputGeom = ctx.freshName("outputGeom")
-        val mosaicGeometryClass = classOf[MosaicGeometryJTS].getName
+        val mosaicGeometryClass = classOf[JTSGeometry].getName
         val internalGeometryJavaType = CodeGenerator.javaType(InternalGeometryType)
         (
           s"""

@@ -2,9 +2,8 @@ package com.databricks.labs.mosaic.expressions.geometry.base
 
 import com.databricks.labs.mosaic.codegen.format.ConvertToCodeGen
 import com.databricks.labs.mosaic.core.crs.CRSBoundsProvider
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometry
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.{IndexSystem, IndexSystemFactory}
+import com.databricks.labs.mosaic.core.jts.{JTS, JTSGeometry}
 import com.databricks.labs.mosaic.functions.MosaicExpressionConfig
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenContext
 import org.apache.spark.sql.types.DataType
@@ -18,14 +17,10 @@ trait VectorExpression {
 
     def getIndexSystem(expressionConfig: MosaicExpressionConfig): IndexSystem =
         IndexSystemFactory.getIndexSystem(expressionConfig.getIndexSystem)
-    def getGeometryAPI(expressionConfig: MosaicExpressionConfig): GeometryAPI = GeometryAPI(expressionConfig.getGeometryAPI)
 
-    def geometryAPI: GeometryAPI
-
-    def mosaicGeomClass: String = geometryAPI.mosaicGeometryClass
-    def geomClass: String = geometryAPI.geometryClass
+    def mosaicGeomClass: String = JTS.mosaicGeometryClass
+    private def geomClass: String = JTS.geometryClass
     def CRSBoundsProviderClass: String = classOf[CRSBoundsProvider].getName
-    def geometryAPIClass: String = classOf[GeometryAPI].getName
 
     /**
       * Generic serialisation method for the expression result. It serialises
@@ -42,14 +37,14 @@ trait VectorExpression {
       */
     def serialise(result: Any, returnsGeometry: Boolean, dataType: DataType): Any = {
         if (returnsGeometry) {
-            geometryAPI.serialize(result.asInstanceOf[MosaicGeometry], dataType)
+            JTS.serialize(result.asInstanceOf[JTSGeometry], dataType)
         } else {
             result
         }
     }
 
     /**
-      * Generic serialisation codegen method for the expression. It provide
+      * Generic serialisation codegen method for the expression. It provides
       * serialisation codegen for the geometry if the expression returns a
       * geometry. It yields empty codegen if the expression returns a
       * non-geometry.
@@ -67,7 +62,7 @@ trait VectorExpression {
     def serialiseCodegen(resultRef: String, returnsGeometry: Boolean, dataType: DataType, ctx: CodegenContext): (String, String) = {
         if (returnsGeometry) {
             val baseGeometryRef = ctx.freshName("baseGeometry")
-            val (code, outputRef) = ConvertToCodeGen.writeGeometryCode(ctx, baseGeometryRef, dataType, geometryAPI)
+            val (code, outputRef) = ConvertToCodeGen.writeGeometryCode(ctx, baseGeometryRef, dataType)
             (
               s"""
                  |$geomClass $baseGeometryRef = $resultRef.getGeom();
@@ -89,7 +84,7 @@ trait VectorExpression {
       *   The mosaic geometry instance in codegen.
       */
     def mosaicGeometryRef(geometryRef: String): String = {
-        s"${geometryAPI.mosaicGeometryClass}.apply($geometryRef)"
+        s"${JTS.mosaicGeometryClass}.apply($geometryRef)"
     }
 
 }

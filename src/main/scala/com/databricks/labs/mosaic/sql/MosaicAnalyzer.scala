@@ -38,21 +38,20 @@ case class MosaicAnalyzer(analyzerMosaicFrame: DataFrame) {
         metrics(midInd)._1
     }
 
-    def getResolutionMetrics(
+    private def getResolutionMetrics(
         geometryColumn: String,
         sampleStrategy: SampleStrategy = SampleStrategy(),
         lowerLimit: Int = 5,
         upperLimit: Int = 500
     ): DataFrame = {
         val mosaicContext = MosaicContext.context()
-        import mosaicContext.functions._
         val spark = SparkSession.builder().getOrCreate()
 
         def areaPercentile(p: Double): Column = percentile_approx(col("area"), lit(p), lit(10000))
 
         val percentiles = analyzerMosaicFrame
             .transform(sampleStrategy.transformer)
-            .withColumn("area", st_area(col(geometryColumn)))
+            .withColumn("area", expr(s"st_area($geometryColumn)"))
             .select(
               mean("area").alias("mean"),
               areaPercentile(0.25).alias("p25"),
@@ -62,7 +61,8 @@ case class MosaicAnalyzer(analyzerMosaicFrame: DataFrame) {
             .collect()
             .head
 
-        val meanIndexAreas = for (i <- mosaicContext.getIndexSystem.resolutions) yield (i, getMeanIndexArea(geometryColumn, sampleStrategy, i))
+        val meanIndexAreas = for (i <- mosaicContext.getIndexSystem.resolutions)
+            yield (i, getMeanIndexArea(geometryColumn, sampleStrategy, i))
 
         val indexAreaRows = meanIndexAreas
             .map({ case (resolution, indexArea) =>
@@ -101,25 +101,25 @@ case class MosaicAnalyzer(analyzerMosaicFrame: DataFrame) {
     }
 
     private def getMeanIndexArea(geometryColumn: String, sampleStrategy: SampleStrategy, resolution: Int): Double = {
-        val mosaicContext = MosaicContext.context()
-        import mosaicContext.functions._
         val spark = SparkSession.builder().getOrCreate()
         import spark.implicits._
 
         val meanIndexAreaDf = analyzerMosaicFrame
             .transform(sampleStrategy.transformer)
-            .withColumn("centroid", st_centroid(col(geometryColumn)))
+            .withColumn("centroid", expr(s"st_centroid($geometryColumn)"))
             .select(
               mean(
-                st_area(
-                  grid_boundaryaswkb(
-                    grid_longlatascellid(
-                      st_x(col("centroid")),
-                      st_y(col("centroid")),
-                      lit(resolution)
-                    )
-                  )
-                )
+                expr(s"""
+                        |st_area(
+                        |  grid_boundaryaswkb(
+                        |    grid_longlatascellid(
+                        |    st_x(centroid),
+                        |    st_y(centroid),
+                        |    lit($resolution)
+                        |    )
+                        |  )
+                        |)
+                        |""".stripMargin)
               )
             )
 

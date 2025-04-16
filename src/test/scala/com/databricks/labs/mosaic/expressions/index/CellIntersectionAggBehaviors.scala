@@ -1,5 +1,7 @@
 package com.databricks.labs.mosaic.expressions.index
 
+import com.databricks.labs.mosaic.core.jts.JTS
+import com.databricks.labs.mosaic.expressions.SpatialSQLAPIsMock.{st_aswkb, st_aswkt}
 import com.databricks.labs.mosaic.test.MosaicSpatialQueryTest
 import com.databricks.labs.mosaic.functions.MosaicContext
 import com.databricks.labs.mosaic.test.mocks
@@ -64,7 +66,7 @@ trait CellIntersectionAggBehaviors extends MosaicSpatialQueryTest {
             .select($"actual_wkt", $"expected_wkt")
             .as[(String, String)]
             .collect()
-            .map(r => (mc.getGeometryAPI.geometry(r._1, "WKT"), mc.getGeometryAPI.geometry(r._2, "WKT")))
+            .map(r => (JTS.geometry(r._1, "WKT"), JTS.geometry(r._2, "WKT")))
 
         res.foreach { case (actual, expected) => actual.equalsTopo(expected) shouldEqual true }
 
@@ -77,7 +79,7 @@ trait CellIntersectionAggBehaviors extends MosaicSpatialQueryTest {
                    |) select st_aswkt(intersection_chips.wkb) from subquery""".stripMargin)
             .as[String]
             .collect()
-            .map(wkt => mc.getGeometryAPI.geometry(wkt, "WKT"))
+            .map(wkt => JTS.geometry(wkt, "WKT"))
 
     }
 
@@ -97,7 +99,6 @@ trait CellIntersectionAggBehaviors extends MosaicSpatialQueryTest {
 
         val cellIntersectionAggExpr = CellIntersectionAgg(
           lit(wkt).expr,
-          mc.getGeometryAPI.name,
           mc.getIndexSystem
         )
 

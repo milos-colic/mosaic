@@ -1,16 +1,8 @@
 package com.databricks.labs.mosaic.expressions.index
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
-import com.databricks.labs.mosaic.core.index.{IndexSystem, IndexSystemFactory}
-import org.apache.spark.sql.catalyst.expressions.{
-    BinaryExpression,
-    ExpectsInputTypes,
-    Expression,
-    ExpressionDescription,
-    ExpressionInfo,
-    NullIntolerant
-}
+import com.databricks.labs.mosaic.core.index.IndexSystem
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
+import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.types._
 
@@ -23,13 +15,11 @@ import org.apache.spark.sql.types._
   """,
   since = "1.0"
 )
-case class CellKRing(cellId: Expression, k: Expression, indexSystem: IndexSystem, geometryAPIName: String)
+case class CellKRing(cellId: Expression, k: Expression, indexSystem: IndexSystem)
     extends BinaryExpression
       with ExpectsInputTypes
       with NullIntolerant
       with CodegenFallback {
-
-    val geometryAPI: GeometryAPI = GeometryAPI(geometryAPIName)
 
     // noinspection DuplicatedCode
     override def inputTypes: Seq[DataType] =
@@ -72,7 +62,7 @@ case class CellKRing(cellId: Expression, k: Expression, indexSystem: IndexSystem
 
     override def makeCopy(newArgs: Array[AnyRef]): Expression = {
         val asArray = newArgs.take(2).map(_.asInstanceOf[Expression])
-        val res = CellKRing(asArray(0), asArray(1), indexSystem, geometryAPIName)
+        val res = CellKRing(asArray(0), asArray(1), indexSystem)
         res.copyTagsFrom(this)
         res
     }

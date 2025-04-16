@@ -1,17 +1,14 @@
 package com.databricks.labs.mosaic.expressions.index
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
-import org.apache.spark.sql.catalyst.expressions.{BinaryExpression, Expression, ExpressionInfo, NullIntolerant}
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
+import org.apache.spark.sql.catalyst.expressions.{BinaryExpression, Expression, ExpressionInfo, NullIntolerant}
 import org.apache.spark.sql.types._
 
-case class GridDistance(cellId: Expression, cellId2: Expression, indexSystem: IndexSystem, geometryAPIName: String)
+case class GridDistance(cellId: Expression, cellId2: Expression, indexSystem: IndexSystem)
     extends BinaryExpression
       with NullIntolerant
       with CodegenFallback {
-
-    val geometryAPI: GeometryAPI = GeometryAPI(geometryAPIName)
 
     override def right: Expression = cellId2
 
@@ -45,7 +42,7 @@ case class GridDistance(cellId: Expression, cellId2: Expression, indexSystem: In
 
     override def makeCopy(newArgs: Array[AnyRef]): Expression = {
         val asArray = newArgs.take(2).map(_.asInstanceOf[Expression])
-        val res = GridDistance(asArray(0), asArray(1), indexSystem, geometryAPIName)
+        val res = GridDistance(asArray(0), asArray(1), indexSystem)
         res.copyTagsFrom(this)
         res
     }

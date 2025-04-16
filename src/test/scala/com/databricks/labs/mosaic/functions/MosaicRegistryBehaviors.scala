@@ -1,7 +1,6 @@
 package com.databricks.labs.mosaic.functions
 
 import com.databricks.labs.mosaic._
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
 import com.databricks.labs.mosaic.expressions.raster.RST_MetaData
 import com.databricks.labs.mosaic.functions.MosaicRegistryBehaviors.mosaicContext
@@ -36,9 +35,7 @@ object MosaicRegistryBehaviors extends MockFactory {
         val ix = stub[IndexSystem]
         ix.getCellIdDataType _ when () returns LongType
         ix.name _ when () returns H3.name
-        val gapi = stub[GeometryAPI]
-        gapi.name _ when () returns JTS.name
-        MosaicContext.build(ix, gapi)
+        MosaicContext.build(ix)
     }
 
 }

@@ -1,23 +1,22 @@
 package com.databricks.labs.mosaic.core.geometry.triangulation
 
-import com.databricks.labs.mosaic.core.types.model.TriangulationSplitPointTypeEnum
-import org.locationtech.jts.geom.{Coordinate, CoordinateList, Envelope, Geometry, LineString, MultiPoint}
 import org.locationtech.jts.geom.util.LinearComponentExtracter
-import org.locationtech.jts.triangulate.{ConformingDelaunayTriangulator, ConstraintSplitPointFinder, ConstraintVertex, DelaunayTriangulationBuilder, MidpointSplitPointFinder, NonEncroachingSplitPointFinder, Segment}
+import org.locationtech.jts.geom.{Coordinate, CoordinateList, Envelope, Geometry, LineString, MultiPoint}
 import org.locationtech.jts.triangulate.quadedge.QuadEdgeSubdivision
+import org.locationtech.jts.triangulate._
 
 import java.util
 
 class JTSConformingDelaunayTriangulationBuilder(geom: MultiPoint) {
 
         var tolerance: Double = 0.0
-        val constraintVertexMap = new util.HashMap[Coordinate, ConstraintVertex]
-        var constraintLines: Geometry = null
-        var splitPointFinder: ConstraintSplitPointFinder = null
+        private val constraintVertexMap = new util.HashMap[Coordinate, ConstraintVertex]
+        var constraintLines: Geometry = _
+        var splitPointFinder: ConstraintSplitPointFinder = _
 
-        def siteCoords: CoordinateList = DelaunayTriangulationBuilder.extractUniqueCoordinates(geom)
+        private def siteCoords: CoordinateList = DelaunayTriangulationBuilder.extractUniqueCoordinates(geom)
 
-        def siteEnv: Envelope = DelaunayTriangulationBuilder.envelope(siteCoords)
+        private def siteEnv: Envelope = DelaunayTriangulationBuilder.envelope(siteCoords)
 
         private def createSiteVertices(coords: CoordinateList): util.ArrayList[ConstraintVertex] =
         {
@@ -39,24 +38,14 @@ class JTSConformingDelaunayTriangulationBuilder(geom: MultiPoint) {
             this.constraintLines = constraintLines
         }
 
-        def setSplitPointFinder(splitPointFinder: TriangulationSplitPointTypeEnum.Value): Unit = {
-            this.splitPointFinder =
-                splitPointFinder match {
-                    case TriangulationSplitPointTypeEnum.MIDPOINT =>
-                        new MidpointSplitPointFinder
-                    case TriangulationSplitPointTypeEnum.NONENCROACHING =>
-                        new NonEncroachingSplitPointFinder
-                }
-        }
-
-        def createVertices(geom: Geometry): Unit = {
+        private def createVertices(geom: Geometry): Unit = {
             geom.getCoordinates.foreach(coord => {
                 val v = new ConstraintVertex(coord)
                 constraintVertexMap.put(coord, v)
             })
         }
 
-        def createConstraintSegments(geometry: Geometry): util.ArrayList[Segment] = {
+        private def createConstraintSegments(geometry: Geometry): util.ArrayList[Segment] = {
             val constraintSegs = new util.ArrayList[Segment]
             LinearComponentExtracter.getLines(geometry)
                 .toArray
@@ -66,7 +55,7 @@ class JTSConformingDelaunayTriangulationBuilder(geom: MultiPoint) {
             constraintSegs
         }
 
-        def createConstraintSegments(line: LineString, constraintSegs: util.ArrayList[Segment]): Unit = {
+        private def createConstraintSegments(line: LineString, constraintSegs: util.ArrayList[Segment]): Unit = {
             val coords = line.getCoordinates
             coords.zip(coords.tail)
                 .map(c => new Segment(c._1, c._2))
@@ -76,7 +65,7 @@ class JTSConformingDelaunayTriangulationBuilder(geom: MultiPoint) {
         def create(): QuadEdgeSubdivision = {
             var segments: util.ArrayList[Segment] = null
             if (constraintLines != null) {
-                siteEnv.expandToInclude(constraintLines.getEnvelopeInternal())
+                siteEnv.expandToInclude(constraintLines.getEnvelopeInternal)
                 createVertices(constraintLines)
                 segments = createConstraintSegments(constraintLines)
             }
@@ -86,7 +75,7 @@ class JTSConformingDelaunayTriangulationBuilder(geom: MultiPoint) {
             cdt.setConstraints(segments, new util.ArrayList(constraintVertexMap.values()))
             cdt.formInitialDelaunay()
             if (constraintLines != null) { cdt.enforceConstraints() }
-            cdt.getSubdivision()
+            cdt.getSubdivision
         }
 
         def getTriangles: Geometry = {

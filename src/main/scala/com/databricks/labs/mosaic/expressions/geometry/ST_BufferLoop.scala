@@ -1,6 +1,6 @@
 package com.databricks.labs.mosaic.expressions.geometry
 
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometry
+import com.databricks.labs.mosaic.core.jts.JTSGeometry
 import com.databricks.labs.mosaic.expressions.base.{GenericExpressionFactory, WithExpressionInfo}
 import com.databricks.labs.mosaic.expressions.geometry.base.UnaryVector2ArgExpression
 import com.databricks.labs.mosaic.functions.MosaicExpressionConfig
@@ -18,7 +18,7 @@ import org.apache.spark.sql.types.DataType
   * @param outerRadius
   *   Expression containing the outer radius.
   * @param expressionConfig
-  *   Mosaic execution context, e.g. geometryAPI, indexSystem, etc. Additional
+  *   Mosaic execution context, e.g. indexSystem, etc. Additional
   *   arguments for the expression (expressionConfigs).
   */
 case class ST_BufferLoop(
@@ -36,7 +36,7 @@ case class ST_BufferLoop(
 
     override def dataType: DataType = inputGeom.dataType
 
-    override def geometryTransform(geometry: MosaicGeometry, arg1: Any, arg2: Any): Any = {
+    override def geometryTransform(geometry: JTSGeometry, arg1: Any, arg2: Any): Any = {
         val innerRadius = arg1.asInstanceOf[Double]
         val outerRadius = arg2.asInstanceOf[Double]
         geometry.buffer(outerRadius).difference(geometry.buffer(innerRadius))

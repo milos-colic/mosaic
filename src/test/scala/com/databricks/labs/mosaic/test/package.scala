@@ -1,9 +1,9 @@
 package com.databricks.labs.mosaic
 
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometry
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index._
+import com.databricks.labs.mosaic.core.jts.{JTS, JTSGeometry}
 import com.databricks.labs.mosaic.core.types.model.Coordinates
+import com.databricks.labs.mosaic.expressions.SpatialSQLAPIsMock.{st_asgeojson, st_geomfromgeojson, st_geomfromwkt, st_point, st_setsrid, st_transform, st_translate, st_xmax, st_ymax}
 import com.databricks.labs.mosaic.functions.MosaicContext
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
@@ -353,7 +353,7 @@ package object test {
 
         override def name: String = "MOCK"
 
-        override def polyfill(geometry: MosaicGeometry, resolution: Int, geometryAPI: GeometryAPI): Seq[Long] = ???
+        override def polyfill(geometry: JTSGeometry, resolution: Int): Seq[Long] = ???
 
         override def format(id: Long): String = ???
 
@@ -369,9 +369,9 @@ package object test {
 
         override def resolutions: Set[Int] = ???
 
-        override def indexToGeometry(index: Long, geometryAPI: GeometryAPI): MosaicGeometry = ???
+        override def indexToGeometry(index: Long): JTSGeometry = ???
 
-        override def getBufferRadius(geometry: MosaicGeometry, resolution: Int, geometryAPI: GeometryAPI): Double = ???
+        override def getBufferRadius(geometry: JTSGeometry, resolution: Int): Double = ???
 
         override def parse(id: String): Long = ???
 

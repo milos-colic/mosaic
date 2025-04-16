@@ -1,7 +1,6 @@
 package com.databricks.labs.mosaic.expressions.raster
 
 import com.databricks.labs.mosaic.{MOSAIC_RASTER_READ_IN_MEMORY, MOSAIC_RASTER_READ_STRATEGY}
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
 import com.databricks.labs.mosaic.functions.MosaicContext
 import com.databricks.labs.mosaic.test.mocks.filePath
@@ -10,9 +9,9 @@ import org.scalatest.matchers.should.Matchers._
 
 trait RST_FormatBehaviors extends QueryTest {
 
-    def formatBehavior(indexSystem: IndexSystem, geometryAPI: GeometryAPI): Unit = {
+    def formatBehavior(indexSystem: IndexSystem): Unit = {
         spark.sparkContext.setLogLevel("ERROR")
-        val mc = MosaicContext.build(indexSystem, geometryAPI)
+        val mc = MosaicContext.build(indexSystem)
         mc.register()
         val sc = spark
         import mc.functions._

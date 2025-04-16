@@ -1,8 +1,8 @@
 package com.databricks.labs.mosaic.expressions.geometry
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
 import com.databricks.labs.mosaic.core.types.model.TriangulationSplitPointTypeEnum
+import com.databricks.labs.mosaic.expressions.SpatialSQLAPIsMock.{st_buffer, st_geometrytype, st_geomfromwkt, st_intersects}
 import com.databricks.labs.mosaic.functions.MosaicContext
 import org.apache.spark.sql.QueryTest
 import org.apache.spark.sql.functions._
@@ -19,13 +19,13 @@ trait ST_TriangulateBehaviours extends QueryTest {
     val buffer = 50.0
     val mergeTolerance = 1e-2
     val snapTolerance = 0.01
-    val splitPointFinder = TriangulationSplitPointTypeEnum.NONENCROACHING
+    val splitPointFinder: TriangulationSplitPointTypeEnum.Value = TriangulationSplitPointTypeEnum.NONENCROACHING
 
-    def simpleTriangulateBehavior(indexSystem: IndexSystem, geometryAPI: GeometryAPI): Unit = {
+    def simpleTriangulateBehavior(indexSystem: IndexSystem): Unit = {
 
         val sc = spark
         import sc.implicits._
-        val mc = MosaicContext.build(indexSystem, geometryAPI)
+        val mc = MosaicContext.build(indexSystem)
         mc.register()
         import mc.functions._
 
@@ -47,11 +47,11 @@ trait ST_TriangulateBehaviours extends QueryTest {
 
     }
 
-    def conformingTriangulateBehavior(indexSystem: IndexSystem, geometryAPI: GeometryAPI): Unit = {
+    def conformingTriangulateBehavior(indexSystem: IndexSystem): Unit = {
 
         val sc = spark
         import sc.implicits._
-        val mc = MosaicContext.build(indexSystem, geometryAPI)
+        val mc = MosaicContext.build(indexSystem)
         mc.register()
         import mc.functions._
 

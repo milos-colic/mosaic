@@ -1,8 +1,8 @@
 package com.databricks.labs.mosaic.expressions.index
 
 import com.databricks.labs.mosaic.core.Mosaic
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
-import com.databricks.labs.mosaic.core.index.{IndexSystem, IndexSystemFactory}
+import com.databricks.labs.mosaic.core.index.IndexSystem
+import com.databricks.labs.mosaic.core.jts.JTS
 import com.databricks.labs.mosaic.core.types._
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions._
@@ -24,14 +24,11 @@ case class MosaicFill(
     geom: Expression,
     resolution: Expression,
     keepCoreGeom: Expression,
-    indexSystem: IndexSystem,
-    geometryAPIName: String
+    indexSystem: IndexSystem
 ) extends TernaryExpression
       with ExpectsInputTypes
       with NullIntolerant
       with CodegenFallback {
-
-    val geometryAPI: GeometryAPI = GeometryAPI(geometryAPIName)
 
     // noinspection DuplicatedCode
     override def inputTypes: Seq[DataType] = {
@@ -79,12 +76,12 @@ case class MosaicFill(
       */
     // noinspection DuplicatedCode
     override def nullSafeEval(input1: Any, input2: Any, input3: Any): Any = {
-        val geometry = geometryAPI.geometry(input1, first.dataType)
+        val geometry = JTS.geometry(input1, first.dataType)
         val resolution: Int = indexSystem.getResolution(input2)
         val keepCoreGeom: Boolean = input3.asInstanceOf[Boolean]
 
         val chips = Mosaic
-            .getChips(geometry, resolution, keepCoreGeom, indexSystem, geometryAPI)
+            .getChips(geometry, resolution, keepCoreGeom, indexSystem)
             .map(_.formatCellId(indexSystem))
             .map(_.serialize)
 
@@ -93,7 +90,7 @@ case class MosaicFill(
 
     override def makeCopy(newArgs: Array[AnyRef]): Expression = {
         val asArray = newArgs.take(3).map(_.asInstanceOf[Expression])
-        val res = MosaicFill(asArray(0), asArray(1), asArray(2), indexSystem, geometryAPIName)
+        val res = MosaicFill(asArray(0), asArray(1), asArray(2), indexSystem)
         res.copyTagsFrom(this)
         res
     }

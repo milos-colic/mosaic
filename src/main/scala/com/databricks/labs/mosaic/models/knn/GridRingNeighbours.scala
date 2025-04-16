@@ -84,7 +84,7 @@ case class GridRingNeighbours(override val uid: String, var right: Dataset[_])
                     .withColumn(s"max_$distanceCol", max(distanceCol).over(window))
                     .withColumn("max_iteration", max("iteration").over(window))
                     .withColumn("iteratedCells", grid_geometrykring(col(featureCol), res, col("max_iteration")))
-                    .withColumn("missedCandidateCells", grid_tessellate(st_buffer(col(featureCol), col(s"max_$distanceCol")), res))
+                    .withColumn("missedCandidateCells", grid_tessellate(expr(s"st_buffer(featureCol, max_$distanceCol)"), res))
                     .withColumn("missedCandidateCells", col("missedCandidateCells").getField("chips").getField("index_id"))
                     .withColumn(leftKringCol, explode(array_except(col("missedCandidateCells"), col("iteratedCells"))))
                     .drop(s"max_$distanceCol", "max_iteration", "iteratedCells", "missedCandidateCells")
@@ -144,13 +144,13 @@ case class GridRingNeighbours(override val uid: String, var right: Dataset[_])
             .agg(
               // in scala variable arguments are passed as Seq.head, Seq.tail :_*
               // so we need to pass the first element of the Seq and then the rest of the Seq
-              st_intersects_aggregate(col(leftKringCol), col(rightGridCol)).alias("intersects"),
+              st_intersects_agg(col(leftKringCol), col(rightGridCol)).alias("intersects"),
               matchesAggSchema: _*
             )
             // keep all matches with intersects but dont drop no matches cases
             .where(coalesce(col("intersects"), lit(true)))
             .drop("intersects", leftKringCol, rightGridCol)
-            .withColumn(distanceCol, st_distance(col(getLeftFeatureCol), col(projectedRightFeature)))
+            .withColumn(distanceCol, expr(s"st_distance($getLeftFeatureCol, $projectedRightFeature)"))
             .withColumn("is_self_match", hash(col(getLeftFeatureCol)) === hash(col(projectedRightFeature)))
             .where(!col("is_self_match"))
             .withColumn("neighbour_number", row_number().over(window))

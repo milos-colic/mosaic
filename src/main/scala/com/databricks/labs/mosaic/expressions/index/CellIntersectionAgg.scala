@@ -1,7 +1,7 @@
 package com.databricks.labs.mosaic.expressions.index
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
+import com.databricks.labs.mosaic.core.jts.JTS
 import com.databricks.labs.mosaic.core.types.ChipType
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.{Expression, ExpressionInfo, UnsafeProjection, UnsafeRow}
@@ -14,14 +14,12 @@ import scala.collection.mutable.ArrayBuffer
 
 case class CellIntersectionAgg(
     inputChip: Expression,
-    geometryAPIName: String,
     indexSystem: IndexSystem,
     mutableAggBufferOffset: Int = 0,
     inputAggBufferOffset: Int = 0
 ) extends TypedImperativeAggregate[ArrayBuffer[Any]]
       with UnaryLike[Expression] {
 
-    val geometryAPI: GeometryAPI = GeometryAPI.apply(geometryAPIName)
     override lazy val deterministic: Boolean = true
     override val child: Expression = inputChip
     override val nullable: Boolean = false
@@ -54,7 +52,7 @@ case class CellIntersectionAgg(
             buffer.head
         } else {
             // There is at least one boundary chip in the buffer. Core chips have no influence on the intersection.
-            val intersection = boundary_cells.map(r => geometryAPI.geometry(r.getBinary(2), "WKB")).reduce(_.intersection(_))
+            val intersection = boundary_cells.map(r => JTS.geometry(r.getBinary(2), "WKB")).reduce(_.intersection(_))
             InternalRow(false, index_id, intersection.toWKB)
         }
     }

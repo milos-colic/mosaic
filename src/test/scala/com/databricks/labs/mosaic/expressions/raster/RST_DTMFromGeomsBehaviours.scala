@@ -1,8 +1,8 @@
 package com.databricks.labs.mosaic.expressions.raster
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
 import com.databricks.labs.mosaic.core.types.model.TriangulationSplitPointTypeEnum
+import com.databricks.labs.mosaic.expressions.SpatialSQLAPIsMock._
 import com.databricks.labs.mosaic.functions.MosaicContext
 import org.apache.spark.sql.functions.{array, collect_list, lit}
 import org.apache.spark.sql.test.SharedSparkSessionGDAL
@@ -15,13 +15,12 @@ trait RST_DTMFromGeomsBehaviours extends SharedSparkSessionGDAL {
     val linesPath = "src/test/resources/binary/elevation/sd46_dtm_breakline.shp"
     val mergeTolerance = 1e-6
     val snapTolerance = 0.01
-    val splitPointFinder = TriangulationSplitPointTypeEnum.NONENCROACHING
+    val splitPointFinder: TriangulationSplitPointTypeEnum.Value = TriangulationSplitPointTypeEnum.NONENCROACHING
     val noData = -9999.0
 
-    def simpleRasterizeTest(indexSystem: IndexSystem, geometryAPI: GeometryAPI): Unit = {
+    def simpleRasterizeTest(indexSystem: IndexSystem): Unit = {
 
-        //spark.conf.set("spark.hadoop.fs.hdfs.impl", classOf[org.apache.hadoop.fs.RawLocalFileSystem].getName)
-        val mc = MosaicContext.build(indexSystem, geometryAPI)
+        val mc = MosaicContext.build(indexSystem)
         import mc.functions._
         val sc = spark
         import sc.implicits._
@@ -81,9 +80,9 @@ trait RST_DTMFromGeomsBehaviours extends SharedSparkSessionGDAL {
 
     }
 
-    def conformedTriangulationRasterizeTest(indexSystem: IndexSystem, geometryAPI: GeometryAPI): Unit = {
+    def conformedTriangulationRasterizeTest(indexSystem: IndexSystem): Unit = {
 
-        val mc = MosaicContext.build(indexSystem, geometryAPI)
+        val mc = MosaicContext.build(indexSystem)
         import mc.functions._
         val sc = spark
         import sc.implicits._
@@ -157,9 +156,9 @@ trait RST_DTMFromGeomsBehaviours extends SharedSparkSessionGDAL {
         noException should be thrownBy result.collect()
     }
 
-    def multiRegionTriangulationRasterizeTest(indexSystem: IndexSystem, geometryAPI: GeometryAPI): Unit = {
+    def multiRegionTriangulationRasterizeTest(indexSystem: IndexSystem): Unit = {
 
-        val mc = MosaicContext.build(indexSystem, geometryAPI)
+        val mc = MosaicContext.build(indexSystem)
         import mc.functions._
         val sc = spark
         import sc.implicits._
@@ -175,7 +174,7 @@ trait RST_DTMFromGeomsBehaviours extends SharedSparkSessionGDAL {
             .withColumn("cells", grid_tessellateexplode($"extent_geom", lit(3)))
             .withColumn("extent", st_geomfromwkb($"cells.wkb"))
             .withColumn("extent_buffered", st_buffer($"extent", lit(rasterBuffer)))
-            .withColumn("raster_origin", st_point(st_xmin($"extent"), st_ymax($"extent"))) // top left
+            .withColumn("raster_origin", st_point(st_x($"extent"), st_y($"extent"))) // top left
             .withColumn("raster_origin", st_setsrid($"raster_origin", lit(27700)))
             .select("cells.index_id", "extent_buffered", "raster_origin")
 

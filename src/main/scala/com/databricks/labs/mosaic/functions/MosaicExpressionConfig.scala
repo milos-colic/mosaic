@@ -36,7 +36,6 @@ case class MosaicExpressionConfig(
 
         // update defaults as well
         this
-            .setGeometryAPI(spark.conf.get(MOSAIC_GEOMETRY_API, JTS.name))
             .setIndexSystem(spark.conf.get(MOSAIC_INDEX_SYSTEM, H3.name))
             .setRasterCheckpoint(spark.conf.get(MOSAIC_RASTER_CHECKPOINT, MOSAIC_RASTER_CHECKPOINT_DEFAULT))
             .setRasterUseCheckpoint(spark.conf.get(MOSAIC_RASTER_USE_CHECKPOINT, MOSAIC_RASTER_USE_CHECKPOINT_DEFAULT))
@@ -47,8 +46,6 @@ case class MosaicExpressionConfig(
     def getGDALConf: Map[String, String] = {
         configs.filter { case (k, _) => k.startsWith(MOSAIC_GDAL_PREFIX) }
     }
-
-    def getGeometryAPI: String = configs.getOrElse(MOSAIC_GEOMETRY_API, JTS.name)
 
     def getRasterCheckpoint: String = configs.getOrElse(MOSAIC_RASTER_CHECKPOINT, MOSAIC_RASTER_CHECKPOINT_DEFAULT)
 
@@ -69,10 +66,6 @@ case class MosaicExpressionConfig(
     def setGDALConf(conf: RuntimeConfig): MosaicExpressionConfig = {
         val toAdd = conf.getAll.filter(_._1.startsWith(MOSAIC_GDAL_PREFIX))
         MosaicExpressionConfig(configs ++ toAdd, hConf)
-    }
-
-    def setGeometryAPI(api: String): MosaicExpressionConfig = {
-        MosaicExpressionConfig(configs + (MOSAIC_GEOMETRY_API -> api), hConf)
     }
 
     def setIndexSystem(system: String): MosaicExpressionConfig = {
@@ -115,7 +108,6 @@ object MosaicExpressionConfig {
         val hConf = new SerializableConfiguration(spark.sessionState.newHadoopConf())
         val expressionConfig = new MosaicExpressionConfig(Map.empty[String, String], hConf)
         expressionConfig
-            .setGeometryAPI(spark.conf.get(MOSAIC_GEOMETRY_API, JTS.name))
             .setIndexSystem(spark.conf.get(MOSAIC_INDEX_SYSTEM, H3.name))
             .setRasterCheckpoint(spark.conf.get(MOSAIC_RASTER_CHECKPOINT, MOSAIC_RASTER_CHECKPOINT_DEFAULT))
             .setRasterUseCheckpoint(spark.conf.get(MOSAIC_RASTER_USE_CHECKPOINT, MOSAIC_RASTER_USE_CHECKPOINT_DEFAULT))

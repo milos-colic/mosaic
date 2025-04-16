@@ -7,7 +7,7 @@ import scala.collection.immutable
 
 trait RequiresCRS {
 
-    val encodings: immutable.Seq[String] = List("COORDS", "GEOJSON")
+    private val encodings: immutable.Seq[String] = List("COORDS", "GEOJSON")
 
     def getEncoding(dataType: DataType): String =
         dataType match {

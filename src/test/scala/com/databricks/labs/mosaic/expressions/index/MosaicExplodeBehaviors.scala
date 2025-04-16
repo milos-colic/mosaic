@@ -2,8 +2,10 @@ package com.databricks.labs.mosaic.expressions.index
 
 import com.databricks.labs.mosaic.core.index._
 import com.databricks.labs.mosaic.core.Mosaic
+import com.databricks.labs.mosaic.core.jts.JTS
+import com.databricks.labs.mosaic.expressions.SpatialSQLAPIsMock.{st_aswkb, st_aswkt}
 import com.databricks.labs.mosaic.functions.MosaicContext
-import com.databricks.labs.mosaic.test.{mocks, MosaicSpatialQueryTest}
+import com.databricks.labs.mosaic.test.{MosaicSpatialQueryTest, mocks}
 import com.databricks.labs.mosaic.test.mocks.{getBoroughs, getWKTRowsDf}
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
@@ -30,7 +32,7 @@ trait MosaicExplodeBehaviors extends MosaicSpatialQueryTest {
 
         val mosaics = boroughs
             .select(
-              mosaic_explode(col("wkt"), resolution)
+              grid_tessellateexplode(col("wkt"), resolution)
             )
             .collect()
 
@@ -73,7 +75,7 @@ trait MosaicExplodeBehaviors extends MosaicSpatialQueryTest {
 
         val noEmptyChips = df
             .select(
-              mosaic_explode(col("wkt"), resolution, keepCoreGeometries = true)
+              grid_tessellateexplode(col("wkt"), resolution, keepCoreGeometries = true)
             )
             .filter(col("index.wkb").isNull)
 
@@ -81,7 +83,7 @@ trait MosaicExplodeBehaviors extends MosaicSpatialQueryTest {
 
         val noEmptyChips2 = df
             .select(
-              mosaic_explode(col("wkt"), resolution, keepCoreGeometries = lit(true))
+                grid_tessellateexplode(col("wkt"), resolution, keepCoreGeometries = lit(true))
             )
             .filter(col("index.wkb").isNull)
 
@@ -89,7 +91,7 @@ trait MosaicExplodeBehaviors extends MosaicSpatialQueryTest {
 
         val emptyChips = df
             .select(
-              mosaic_explode(col("wkt"), resolution, keepCoreGeometries = false)
+                grid_tessellateexplode(col("wkt"), resolution, keepCoreGeometries = false)
             )
             .filter(col("index.wkb").isNull)
 
@@ -97,7 +99,7 @@ trait MosaicExplodeBehaviors extends MosaicSpatialQueryTest {
 
         val emptyChips2 = df
             .select(
-              mosaic_explode(col("wkt"), resolution, keepCoreGeometries = lit(false))
+                grid_tessellateexplode(col("wkt"), resolution, keepCoreGeometries = lit(false))
             )
             .filter(col("index.wkb").isNull)
 
@@ -156,7 +158,7 @@ trait MosaicExplodeBehaviors extends MosaicSpatialQueryTest {
 
         val mosaics = wktRows
             .select(
-              mosaic_explode(col("wkt"), resolution)
+                grid_tessellateexplode(col("wkt"), resolution)
             )
             .collect()
 
@@ -223,7 +225,7 @@ trait MosaicExplodeBehaviors extends MosaicSpatialQueryTest {
 
         val mosaics = boroughs
             .select(
-              mosaic_explode(convert_to(col("wkt"), "wkb"), resolution)
+                grid_tessellateexplode(st_aswkb(col("wkt")), resolution)
             )
             .collect()
 
@@ -240,71 +242,6 @@ trait MosaicExplodeBehaviors extends MosaicSpatialQueryTest {
         boroughs.collect().length should be <= mosaics2.length
     }
 
-    def hexDecompose(mosaicContext: MosaicContext): Unit = {
-        spark.sparkContext.setLogLevel("ERROR")
-        val mc = mosaicContext
-        import mc.functions._
-        mc.register(spark)
-
-        val resolution = mc.getIndexSystem match {
-            case H3IndexSystem  => 3
-            case BNGIndexSystem => 5
-            case _              => 3
-        }
-
-        val boroughs: DataFrame = getBoroughs(mc)
-
-        val mosaics = boroughs
-            .select(
-              mosaic_explode(convert_to(col("wkt"), "hex"), resolution)
-            )
-            .collect()
-
-        boroughs.collect().length should be <= mosaics.length
-
-        boroughs.createOrReplaceTempView("boroughs")
-
-        val mosaics2 = spark
-            .sql(s"""
-                    |select mosaic_explode(convert_to_hex(wkt), $resolution) from boroughs
-                    |""".stripMargin)
-            .collect()
-
-        boroughs.collect().length should be <= mosaics2.length
-    }
-
-    def coordsDecompose(mosaicContext: MosaicContext): Unit = {
-        spark.sparkContext.setLogLevel("ERROR")
-        val mc = mosaicContext
-        import mc.functions._
-        mc.register(spark)
-
-        val resolution = mc.getIndexSystem match {
-            case H3IndexSystem  => 3
-            case BNGIndexSystem => 5
-            case _              => 3
-        }
-
-        val boroughs: DataFrame = getBoroughs(mc)
-
-        val mosaics = boroughs
-            .select(
-              mosaic_explode(convert_to(col("wkt"), "coords"), resolution)
-            )
-            .collect()
-
-        boroughs.collect().length should be <= mosaics.length
-
-        boroughs.createOrReplaceTempView("boroughs")
-
-        val mosaics2 = spark
-            .sql(s"""
-                    |select mosaic_explode(convert_to_coords(wkt), $resolution) from boroughs
-                    |""".stripMargin)
-            .collect()
-
-        boroughs.collect().length should be <= mosaics2.length
-    }
 
     def columnFunctionSignatures(mosaicContext: MosaicContext): Unit = {
         val funcs = mosaicContext.functions
@@ -313,12 +250,6 @@ trait MosaicExplodeBehaviors extends MosaicSpatialQueryTest {
         noException should be thrownBy funcs.grid_tessellateexplode(col("wkt"), 3, keepCoreGeometries = true)
         noException should be thrownBy funcs.grid_tessellateexplode(col("wkt"), 3, lit(false))
         noException should be thrownBy funcs.grid_tessellateexplode(col("wkt"), lit(3), lit(false))
-        // legacy APIs
-        noException should be thrownBy funcs.mosaic_explode(col("wkt"), 3)
-        noException should be thrownBy funcs.mosaic_explode(col("wkt"), lit(3))
-        noException should be thrownBy funcs.mosaic_explode(col("wkt"), 3, keepCoreGeometries = true)
-        noException should be thrownBy funcs.mosaic_explode(col("wkt"), 3, lit(false))
-        noException should be thrownBy funcs.mosaic_explode(col("wkt"), lit(3), lit(false))
     }
 
     def auxiliaryMethods(mosaicContext: MosaicContext): Unit = {
@@ -339,8 +270,7 @@ trait MosaicExplodeBehaviors extends MosaicSpatialQueryTest {
           lit(wkt).expr,
           resExpr,
           lit(false).expr,
-          mc.getIndexSystem,
-          mc.getGeometryAPI.name
+          mc.getIndexSystem
         )
 
         mosaicExplodeExpr.position shouldEqual false
@@ -351,8 +281,7 @@ trait MosaicExplodeBehaviors extends MosaicSpatialQueryTest {
           lit(10).expr,
           resExpr,
           lit(false).expr,
-          mc.getIndexSystem,
-          mc.getGeometryAPI.name
+          mc.getIndexSystem
         )
 
         badExpr.checkInputDataTypes().isFailure shouldEqual true
@@ -366,20 +295,13 @@ trait MosaicExplodeBehaviors extends MosaicSpatialQueryTest {
             .isFailure shouldEqual true
 
         // Line decompose error should be thrown
-        val geom = MosaicContext.geometryAPI.geometry("POINT (1 1)", "WKT")
-        an[Error] should be thrownBy Mosaic.lineFill(geom, 5, MosaicContext.indexSystem, MosaicContext.geometryAPI)
+        val geom = JTS.geometry("POINT (1 1)", "WKT")
+        an[Error] should be thrownBy Mosaic.lineFill(geom, 5, MosaicContext.indexSystem)
 
         // Default getters
         noException should be thrownBy mosaicExplodeExpr.geom
         noException should be thrownBy mosaicExplodeExpr.resolution
         noException should be thrownBy mosaicExplodeExpr.keepCoreGeom
-
-        // legacy API def tests
-        noException should be thrownBy mc.functions.mosaic_explode(lit(""), lit(5))
-        noException should be thrownBy mc.functions.mosaic_explode(lit(""), 5)
-        noException should be thrownBy mc.functions.mosaic_explode(lit(""), lit(5), lit(true))
-        noException should be thrownBy mc.functions.mosaic_explode(lit(""), lit(5), keepCoreGeometries = true)
-        noException should be thrownBy mc.functions.mosaic_explode(lit(""), 5, keepCoreGeometries = true)
     }
 
     def issue360(mosaicContext: MosaicContext): Unit = {
@@ -445,10 +367,10 @@ trait MosaicExplodeBehaviors extends MosaicSpatialQueryTest {
             .select(st_aswkt(col("wkb")))
 
         val chips = result.as[String].collect()
-        val resultGeom = chips.map(mosaicContext.getGeometryAPI.geometry(_, "WKT"))
+        val resultGeom = chips.map(JTS.geometry(_, "WKT"))
             .reduce(_ union _)
 
-        val expected = mosaicContext.getGeometryAPI.geometry(wkt, "WKT")
+        val expected = JTS.geometry(wkt, "WKT")
 
       math.abs(expected.getArea - resultGeom.getArea) should be < 1e-8
 

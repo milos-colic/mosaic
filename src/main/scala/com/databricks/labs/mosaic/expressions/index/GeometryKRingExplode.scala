@@ -1,21 +1,19 @@
 package com.databricks.labs.mosaic.expressions.index
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
-import com.databricks.labs.mosaic.core.index.{IndexSystem, IndexSystemFactory}
-import com.databricks.labs.mosaic.core.types.{HexType, InternalGeometryType}
 import com.databricks.labs.mosaic.core.Mosaic
-import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
-import org.apache.spark.sql.catalyst.expressions.{CollectionGenerator, Expression, ExpressionInfo}
-import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
+import com.databricks.labs.mosaic.core.index.IndexSystem
+import com.databricks.labs.mosaic.core.jts.JTS
+import com.databricks.labs.mosaic.core.types.{HexType, InternalGeometryType}
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
+import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
+import org.apache.spark.sql.catalyst.expressions.{CollectionGenerator, Expression, ExpressionInfo}
 import org.apache.spark.sql.types._
 
-case class GeometryKRingExplode(geom: Expression, resolution: Expression, k: Expression, indexSystem: IndexSystem, geometryAPIName: String)
+case class GeometryKRingExplode(geom: Expression, resolution: Expression, k: Expression, indexSystem: IndexSystem)
     extends CollectionGenerator
       with Serializable
       with CodegenFallback {
-
-    val geometryAPI: GeometryAPI = GeometryAPI(geometryAPIName)
 
     override def position: Boolean = false
 
@@ -44,11 +42,11 @@ case class GeometryKRingExplode(geom: Expression, resolution: Expression, k: Exp
         if (geometryRaw == null || resolutionRaw == null || kRaw == null) {
             Seq.empty
         } else {
-            val geometryVal = geometryAPI.geometry(geometryRaw, geom.dataType)
+            val geometryVal = JTS.geometry(geometryRaw, geom.dataType)
             val resolutionVal = indexSystem.getResolution(resolutionRaw)
             val kVal = kRaw.asInstanceOf[Int]
 
-            val kRing = Mosaic.geometryKRing(geometryVal, resolutionVal, kVal, indexSystem, geometryAPI)
+            val kRing = Mosaic.geometryKRing(geometryVal, resolutionVal, kVal, indexSystem)
 
             kRing.map(row => InternalRow.fromSeq(Seq(indexSystem.serializeCellId(row))))
         }

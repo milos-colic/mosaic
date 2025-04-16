@@ -1,23 +1,21 @@
 package com.databricks.labs.mosaic.expressions.geometry
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
+import com.databricks.labs.mosaic.core.jts.JTS
 import com.databricks.labs.mosaic.expressions.index.IndexGeometry
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.{Expression, ExpressionInfo}
 import org.apache.spark.sql.catalyst.expressions.aggregate.{ImperativeAggregate, TypedImperativeAggregate}
+import org.apache.spark.sql.catalyst.expressions.{Expression, ExpressionInfo}
 import org.apache.spark.sql.catalyst.trees.BinaryLike
 import org.apache.spark.sql.types._
 
 case class ST_IntersectsAgg(
     leftChip: Expression,
     rightChip: Expression,
-    geometryAPIName: String,
     mutableAggBufferOffset: Int = 0,
     inputAggBufferOffset: Int = 0
 ) extends TypedImperativeAggregate[Boolean]
       with BinaryLike[Expression] {
 
-    val geometryAPI: GeometryAPI = GeometryAPI.apply(geometryAPIName)
     override val left: Expression = leftChip
     override val right: Expression = rightChip
     override val nullable: Boolean = false
@@ -30,8 +28,8 @@ case class ST_IntersectsAgg(
             val leftChipValue = left.eval(inputRow).asInstanceOf[InternalRow]
             val rightChipValue = right.eval(inputRow).asInstanceOf[InternalRow]
             leftChipValue.getBoolean(0) || rightChipValue.getBoolean(0) || {
-                val leftChipGeom = geometryAPI.geometry(leftChipValue.getBinary(2), "WKB")
-                val rightChipGeom = geometryAPI.geometry(rightChipValue.getBinary(2), "WKB")
+                val leftChipGeom = JTS.geometry(leftChipValue.getBinary(2), "WKB")
+                val rightChipGeom = JTS.geometry(rightChipValue.getBinary(2), "WKB")
                 leftChipGeom.intersects(rightChipGeom)
             }
         }

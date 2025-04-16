@@ -1,7 +1,7 @@
 package com.databricks.labs.mosaic.expressions.index
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
-import com.databricks.labs.mosaic.core.index.{IndexSystem, IndexSystemFactory}
+import com.databricks.labs.mosaic.core.index.IndexSystem
+import com.databricks.labs.mosaic.core.jts.JTS
 import com.databricks.labs.mosaic.core.types.InternalGeometryType
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
 import org.apache.spark.sql.catalyst.expressions._
@@ -18,7 +18,7 @@ import org.apache.spark.unsafe.types.UTF8String
   """,
   since = "1.0"
 )
-case class IndexGeometry(indexID: Expression, format: Expression, indexSystem: IndexSystem, geometryAPIName: String)
+case class IndexGeometry(indexID: Expression, format: Expression, indexSystem: IndexSystem)
     extends BinaryExpression
       with NullIntolerant
       with CodegenFallback {
@@ -63,21 +63,20 @@ case class IndexGeometry(indexID: Expression, format: Expression, indexSystem: I
       *   provided ID
       */
     override def nullSafeEval(input1: Any, input2: Any): Any = {
-        val geometryAPI = GeometryAPI(geometryAPIName)
         val formatName = input2.asInstanceOf[UTF8String].toString
         val indexGeometry = indexID.dataType match {
-            case LongType    => indexSystem.indexToGeometry(input1.asInstanceOf[Long], geometryAPI)
-            case IntegerType => indexSystem.indexToGeometry(input1.asInstanceOf[Int], geometryAPI)
-            case StringType  => indexSystem.indexToGeometry(indexSystem.parse(input1.asInstanceOf[UTF8String].toString), geometryAPI)
+            case LongType    => indexSystem.indexToGeometry(input1.asInstanceOf[Long])
+            case IntegerType => indexSystem.indexToGeometry(input1.asInstanceOf[Int])
+            case StringType  => indexSystem.indexToGeometry(indexSystem.parse(input1.asInstanceOf[UTF8String].toString))
             case _           => throw new Error(s"${indexID.dataType} not supported.")
         }
-        geometryAPI.serialize(indexGeometry, formatName)
+        JTS.serialize(indexGeometry, formatName)
     }
 
     override def makeCopy(newArgs: Array[AnyRef]): Expression = {
         val arg1 = newArgs.head.asInstanceOf[Expression]
         val arg2 = newArgs(1).asInstanceOf[Expression]
-        val res = IndexGeometry(arg1, arg2, indexSystem, geometryAPIName)
+        val res = IndexGeometry(arg1, arg2, indexSystem)
         res.copyTagsFrom(this)
         res
     }

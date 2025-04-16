@@ -1,18 +1,16 @@
 package com.databricks.labs.mosaic.expressions.raster
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
 import com.databricks.labs.mosaic.functions.MosaicContext
 import org.apache.spark.sql.QueryTest
-import org.apache.spark.sql.functions.lit
 import org.scalatest.matchers.should.Matchers._
 
 trait RST_GeoReferenceBehaviors extends QueryTest {
 
     //noinspection MapGetGet
-    def geoReferenceBehavior(indexSystem: IndexSystem, geometryAPI: GeometryAPI): Unit = {
+    def geoReferenceBehavior(indexSystem: IndexSystem): Unit = {
         spark.sparkContext.setLogLevel("ERROR")
-        val mc = MosaicContext.build(indexSystem, geometryAPI)
+        val mc = MosaicContext.build(indexSystem)
         mc.register()
         val sc = spark
         import mc.functions._

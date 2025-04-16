@@ -1,7 +1,6 @@
 package com.databricks.labs.mosaic.expressions.raster
 
 import com.databricks.labs.mosaic.{MOSAIC_RASTER_USE_CHECKPOINT, MOSAIC_RASTER_USE_CHECKPOINT_DEFAULT}
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
 import com.databricks.labs.mosaic.functions.MosaicContext
 import com.databricks.labs.mosaic.utils.FileUtils
@@ -15,13 +14,13 @@ import scala.util.Try
 trait RST_WriteBehaviors extends QueryTest {
 
     // noinspection MapGetGet
-    def behaviors(indexSystem: IndexSystem, geometryAPI: GeometryAPI): Unit = {
+    def behaviors(indexSystem: IndexSystem): Unit = {
         val sc = this.spark
         import sc.implicits._
         sc.sparkContext.setLogLevel("ERROR")
 
         // init
-        val mc = MosaicContext.build(indexSystem, geometryAPI)
+        val mc = MosaicContext.build(indexSystem)
         mc.register(sc)
         import mc.functions._
 

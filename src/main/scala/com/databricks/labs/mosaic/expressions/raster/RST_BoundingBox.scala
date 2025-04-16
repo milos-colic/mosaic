@@ -1,6 +1,6 @@
 package com.databricks.labs.mosaic.expressions.raster
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
+import com.databricks.labs.mosaic.core.jts.{JTS, JTSPoint}
 import com.databricks.labs.mosaic.core.raster.api.GDAL
 import com.databricks.labs.mosaic.core.types.model.{GeometryTypeEnum, MosaicRasterTile}
 import com.databricks.labs.mosaic.expressions.base.{GenericExpressionFactory, WithExpressionInfo}
@@ -35,15 +35,14 @@ case class RST_BoundingBox(
         val gt = raster.getRaster.GetGeoTransform()
         val (originX, originY) = GDAL.toWorldCoord(gt, 0, 0)
         val (endX, endY) = GDAL.toWorldCoord(gt, raster.xSize, raster.ySize)
-        val geometryAPI = GeometryAPI(expressionConfig.getGeometryAPI)
-        val bboxPolygon = geometryAPI.geometry(
+        val bboxPolygon = JTS.geometry(
           Seq(
             Seq(originX, originY),
             Seq(originX, endY),
             Seq(endX, endY),
             Seq(endX, originY),
             Seq(originX, originY)
-          ).map(geometryAPI.fromCoords),
+          ).map(JTS.fromCoords).map(_.asInstanceOf[JTSPoint]),
           GeometryTypeEnum.POLYGON
         )
         raster = null

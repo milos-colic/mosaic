@@ -1,18 +1,16 @@
 package com.databricks.labs.mosaic.expressions.index
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
-import com.databricks.labs.mosaic.core.index.{IndexSystem, IndexSystemFactory}
+import com.databricks.labs.mosaic.core.index.IndexSystem
+import com.databricks.labs.mosaic.core.jts.JTS
 import com.databricks.labs.mosaic.core.types.InternalGeometryType
-import org.apache.spark.sql.catalyst.expressions.{BinaryExpression, Expression, ExpressionInfo, NullIntolerant}
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
+import org.apache.spark.sql.catalyst.expressions.{BinaryExpression, Expression, ExpressionInfo, NullIntolerant}
 import org.apache.spark.sql.types._
 
-case class PointIndexGeom(geom: Expression, resolution: Expression, indexSystem: IndexSystem, geometryAPIName: String)
+case class PointIndexGeom(geom: Expression, resolution: Expression, indexSystem: IndexSystem)
     extends BinaryExpression
       with NullIntolerant
       with CodegenFallback {
-
-    val geometryAPI: GeometryAPI = GeometryAPI(geometryAPIName)
 
     /** Expression output DataType. */
     override def dataType: DataType = indexSystem.getCellIdDataType
@@ -40,7 +38,7 @@ case class PointIndexGeom(geom: Expression, resolution: Expression, indexSystem:
         }
 
         // If another geometry type is provided, it will be converted to a centroid point.
-        val point = geometryAPI.geometry(input1, dataType).getCentroid
+        val point = JTS.geometry(input1, dataType).getCentroid
         val cellID = indexSystem.pointToIndex(point.getX, point.getY, resolution)
 
         indexSystem.serializeCellId(cellID)
@@ -50,7 +48,7 @@ case class PointIndexGeom(geom: Expression, resolution: Expression, indexSystem:
 
     override def makeCopy(newArgs: Array[AnyRef]): Expression = {
         val asArray = newArgs.take(2).map(_.asInstanceOf[Expression])
-        val res = PointIndexGeom(asArray(0), asArray(1), indexSystem, geometryAPIName)
+        val res = PointIndexGeom(asArray(0), asArray(1), indexSystem)
         res.copyTagsFrom(this)
         res
     }

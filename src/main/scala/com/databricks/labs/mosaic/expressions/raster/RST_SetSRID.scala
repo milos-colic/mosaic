@@ -1,6 +1,5 @@
 package com.databricks.labs.mosaic.expressions.raster
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.raster.api.GDAL
 import com.databricks.labs.mosaic.core.types.RasterTileType
 import com.databricks.labs.mosaic.core.types.model.MosaicRasterTile
@@ -30,8 +29,6 @@ case class RST_SetSRID(
         GDAL.enable(expressionConfig)
         RasterTileType(expressionConfig.getCellIdType, rastersExpr, expressionConfig.isRasterUseCheckpoint)
     }
-
-    val geometryAPI: GeometryAPI = GeometryAPI(expressionConfig.getGeometryAPI)
 
     /**
       * Sets the SRID of raster tiles.

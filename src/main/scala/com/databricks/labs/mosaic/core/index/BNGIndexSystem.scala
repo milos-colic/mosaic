@@ -1,7 +1,6 @@
 package com.databricks.labs.mosaic.core.index
 
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometry
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
+import com.databricks.labs.mosaic.core.jts.{JTS, JTSGeometry, JTSPoint}
 import com.databricks.labs.mosaic.core.types.model.Coordinates
 import com.databricks.labs.mosaic.core.types.model.GeometryTypeEnum.POLYGON
 import org.apache.spark.sql.types._
@@ -17,7 +16,7 @@ import scala.util.{Success, Try}
   * system is represented as a square grid, where x and y coordinates are
   * provided as eastings and northings. The index system supports representation
   * of index ids as integers and as strings. The index system supports providing
-  * resolutions as integer numbers and as as string cell size descriptors (eg.
+  * resolutions as integer numbers and as string cell size descriptors (e.g.
   * 500m for resolution where cell edge is 500 meters long). Negative resolution
   * values represent resolutions for quad tree representations where each cell
   * is split into orientation quadrants. Orientation quadrants represent
@@ -106,13 +105,13 @@ object BNGIndexSystem extends IndexSystem(StringType) with Serializable {
     /**
       * Provides a string representation from an integer representation of a BNG
       * index id. The string representations follows letter prefix followed by
-      * easting bin, followed by nothings bin and finally (for quad tree
+      * easting bin, followed by northings bin and finally (for quad tree
       * resolutions) followed by quadrant suffix.
       * @param id
       *   Integer id to be formatted.
       * @return
       *   A string representation of the index id -
-      *   "(prefix)(estings_bin)(northins_bin)(suffix)". E.g. SW123987NW where
+      *   "(prefix)(eastings_bin)(northings_bin)(suffix)". E.g. SW123987NW where
       *   SW is the prefix, 123 is eastings bin, 987 is northings bin and NW is
       *   suffix.
       */
@@ -140,15 +139,15 @@ object BNGIndexSystem extends IndexSystem(StringType) with Serializable {
       * length of the edge to determine the diagonal.
       *
       * @param geometry
-      *   An instance of [[MosaicGeometry]] for which we are computing the
-      *   optimal buffer radius.
+      * An instance of [[JTSGeometry]] for which we are computing the
+      * optimal buffer radius.
       * @param resolution
-      *   A resolution to be used to get the centroid index geometry.
+      * A resolution to be used to get the centroid index geometry.
       * @return
       *   An optimal radius to buffer the geometry in order to avoid blind spots
       *   when performing polyfill.
       */
-    override def getBufferRadius(geometry: MosaicGeometry, resolution: Int, geometryAPI: GeometryAPI): Double = {
+    override def getBufferRadius(geometry: JTSGeometry, resolution: Int): Double = {
         val size = getEdgeSize(resolution)
         size * math.sqrt(2) / 2
     }
@@ -182,11 +181,10 @@ object BNGIndexSystem extends IndexSystem(StringType) with Serializable {
       * @return
       *   A set of indices representing the input geometry.
       */
-    override def polyfill(geometry: MosaicGeometry, resolution: Int, geometryAPI: GeometryAPI): Seq[Long] = {
-//        require(geometryAPI.isDefined, "GeometryAPI cannot be None for BNG Index System.")
+    override def polyfill(geometry: JTSGeometry, resolution: Int): Seq[Long] = {
         @tailrec
         def visit(queue: Set[Long], visited: Set[Long], result: Set[Long]): Set[Long] = {
-            val visits = queue.map(index => (index, geometry.contains(indexToGeometry(index, geometryAPI).getCentroid)))
+            val visits = queue.map(index => (index, geometry.contains(indexToGeometry(index).getCentroid)))
             val matches = visits.filter(_._2)
             val newVisited = visited ++ visits.map(_._1)
             val newQueue = matches.flatMap(c => kLoop(c._1, 1).filterNot(newVisited.contains))
@@ -336,7 +334,7 @@ object BNGIndexSystem extends IndexSystem(StringType) with Serializable {
     /**
       * BNG resolution can only be an Int value between 0 and 6. Traditional
       * resolutions only support base 10 edge size of the index. In addition to
-      * 0 to 6 resolution, there are mid way resolutions that split index into
+      * 0 to 6 resolution, there are mid-way resolutions that split index into
       * quadrants. Those are denoted as .5 resolutions by convention.
       *
       * @see
@@ -374,7 +372,7 @@ object BNGIndexSystem extends IndexSystem(StringType) with Serializable {
     /**
       * Provides a long representation from a string representation of a BNG
       * index id. The string representations follows letter prefix followed by
-      * easting bin, followed by nothings bin and finally (for quad tree
+      * easting bin, followed by northings bin and finally (for quad tree
       * resolutions) followed by quadrant suffix.
       * @param index
       *   String id to be parsed.
@@ -411,21 +409,21 @@ object BNGIndexSystem extends IndexSystem(StringType) with Serializable {
       * provided index id.
       *
       * @param index
-      *   Id of the index whose geometry should be returned.
+      *   ID of the index whose geometry should be returned.
       * @return
       *   An instance of [[Geometry]] corresponding to index.
       */
-    override def indexToGeometry(index: Long, geometryAPI: GeometryAPI): MosaicGeometry = {
+    override def indexToGeometry(index: Long): JTSGeometry = {
         val digits = indexDigits(index)
         val resolution = getResolution(digits)
         val edgeSize = getEdgeSize(resolution)
         val x = getX(digits, edgeSize)
         val y = getY(digits, edgeSize)
-        val p1 = geometryAPI.fromCoords(Seq(x, y))
-        val p2 = geometryAPI.fromCoords(Seq(x + edgeSize, y))
-        val p3 = geometryAPI.fromCoords(Seq(x + edgeSize, y + edgeSize))
-        val p4 = geometryAPI.fromCoords(Seq(x, y + edgeSize))
-        val geom = geometryAPI.geometry(Seq(p1, p2, p3, p4, p1), POLYGON)
+        val p1 = JTS.fromCoords(Seq(x, y))
+        val p2 = JTS.fromCoords(Seq(x + edgeSize, y))
+        val p3 = JTS.fromCoords(Seq(x + edgeSize, y + edgeSize))
+        val p4 = JTS.fromCoords(Seq(x, y + edgeSize))
+        val geom = JTS.geometry(Seq(p1, p2, p3, p4, p1).map(_.asInstanceOf[JTSPoint]), POLYGON)
         geom.setSpatialReference(this.crsID)
         geom
     }

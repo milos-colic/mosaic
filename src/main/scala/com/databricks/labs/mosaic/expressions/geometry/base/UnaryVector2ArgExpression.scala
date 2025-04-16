@@ -1,8 +1,7 @@
 package com.databricks.labs.mosaic.expressions.geometry.base
 
 import com.databricks.labs.mosaic.codegen.format.ConvertToCodeGen
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometry
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
+import com.databricks.labs.mosaic.core.jts.{JTS, JTSGeometry}
 import com.databricks.labs.mosaic.expressions.base.GenericExpressionFactory
 import com.databricks.labs.mosaic.functions.MosaicExpressionConfig
 import org.apache.spark.sql.catalyst.expressions.{Expression, NullIntolerant, TernaryExpression}
@@ -48,10 +47,8 @@ abstract class UnaryVector2ArgExpression[T <: Expression: ClassTag](
 
     override def third: Expression = arg2Expr
 
-    override def geometryAPI: GeometryAPI = getGeometryAPI(expressionConfig)
-
     /**
-      * The function to be overriden by the extending class. It is called when
+      * The function to be overridden by the extending class. It is called when
       * the expression is evaluated. It provides the vector geometry to the
       * expression. It abstracts spark serialization from the caller.
       * @param geometry
@@ -63,10 +60,10 @@ abstract class UnaryVector2ArgExpression[T <: Expression: ClassTag](
       * @return
       *   A result of the expression.
       */
-    def geometryTransform(geometry: MosaicGeometry, arg1: Any, arg2: Any): Any
+    def geometryTransform(geometry: JTSGeometry, arg1: Any, arg2: Any): Any
 
     /**
-      * Evaluation of the expression. It evaluates the geometry and deserialises
+      * Evaluation of the expression. It evaluates the geometry and deserializes
       * the geometry.
       * @param geometryRow
       *   The row containing the geometry.
@@ -78,13 +75,13 @@ abstract class UnaryVector2ArgExpression[T <: Expression: ClassTag](
       *   The result of the expression.
       */
     override def nullSafeEval(geometryRow: Any, arg1: Any, arg2: Any): Any = {
-        val geometry = geometryAPI.geometry(geometryRow, geometryExpr.dataType)
+        val geometry = JTS.geometry(geometryRow, geometryExpr.dataType)
         val result = geometryTransform(geometry, arg1, arg2)
         serialise(result, returnsGeometry, geometryExpr.dataType)
     }
 
     /**
-      * The function to be overriden by the extending class. It is called when
+      * The function to be overridden by the extending class. It is called when
       * the expression codegen is evaluated. It abstracts spark serialization
       * and deserialization from the caller codegen.
       * @param mosaicGeometryRef
@@ -124,11 +121,11 @@ abstract class UnaryVector2ArgExpression[T <: Expression: ClassTag](
           ctx,
           ev,
           (geomEval, arg1Eval, arg2Eval) => {
-              val (inCode, geomInRef) = ConvertToCodeGen.readGeometryCode(ctx, geomEval, geometryExpr.dataType, geometryAPI)
+              val (inCode, geomInRef) = ConvertToCodeGen.readGeometryCode(ctx, geomEval, geometryExpr.dataType)
               val mosaicGeomRef = mosaicGeometryRef(geomInRef)
               val (expressionCode, resultRef) = geometryCodeGen(mosaicGeomRef, arg1Eval, arg2Eval, ctx)
               val (serialiseCode, serialisedRef) = serialiseCodegen(resultRef, returnsGeometry, geometryExpr.dataType, ctx)
-              geometryAPI.codeGenTryWrap(s"""
+              JTS.codeGenTryWrap(s"""
                                             |$inCode
                                             |$expressionCode
                                             |$serialiseCode

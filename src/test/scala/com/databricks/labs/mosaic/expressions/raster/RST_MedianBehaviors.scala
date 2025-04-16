@@ -1,7 +1,7 @@
 package com.databricks.labs.mosaic.expressions.raster
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
+import com.databricks.labs.mosaic.expressions.SpatialSQLAPIsMock.st_buffer
 import com.databricks.labs.mosaic.functions.MosaicContext
 import org.apache.spark.sql.QueryTest
 import org.apache.spark.sql.functions._
@@ -9,9 +9,9 @@ import org.scalatest.matchers.should.Matchers._
 
 trait RST_MedianBehaviors extends QueryTest {
 
-    def largeAreaBehavior(indexSystem: IndexSystem, geometryAPI: GeometryAPI): Unit = {
+    def largeAreaBehavior(indexSystem: IndexSystem): Unit = {
 
-        val mc = MosaicContext.build(indexSystem, geometryAPI)
+        val mc = MosaicContext.build(indexSystem)
         mc.register()
         val sc = spark
         import mc.functions._
@@ -50,9 +50,9 @@ trait RST_MedianBehaviors extends QueryTest {
 
     }
 
-    def smallAreaBehavior(indexSystem: IndexSystem, geometryAPI: GeometryAPI): Unit = {
+    def smallAreaBehavior(indexSystem: IndexSystem): Unit = {
 
-        val mc = MosaicContext.build(indexSystem, geometryAPI)
+        val mc = MosaicContext.build(indexSystem)
         mc.register()
         val sc = spark
         import mc.functions._

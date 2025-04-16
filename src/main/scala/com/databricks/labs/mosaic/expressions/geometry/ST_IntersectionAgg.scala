@@ -1,7 +1,7 @@
 package com.databricks.labs.mosaic.expressions.geometry
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
+import com.databricks.labs.mosaic.core.jts.JTS
 import com.databricks.labs.mosaic.expressions.index.IndexGeometry
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.aggregate.{ImperativeAggregate, TypedImperativeAggregate}
@@ -12,34 +12,32 @@ import org.apache.spark.sql.types._
 case class ST_IntersectionAgg(
     leftChip: Expression,
     rightChip: Expression,
-    geometryAPIName: String,
     indexSystem: IndexSystem,
     mutableAggBufferOffset: Int,
     inputAggBufferOffset: Int
 ) extends TypedImperativeAggregate[Array[Byte]]
       with BinaryLike[Expression] {
 
-    val geometryAPI: GeometryAPI = GeometryAPI.apply(geometryAPIName)
     override lazy val deterministic: Boolean = true
     override val left: Expression = leftChip
     override val right: Expression = rightChip
     override val nullable: Boolean = false
     override val dataType: DataType = BinaryType
-    private val emptyWKB = geometryAPI.geometry("POLYGON(EMPTY)", "WKT").toWKB
+    private val emptyWKB = JTS.geometry("POLYGON(EMPTY)", "WKT").toWKB
 
     override def prettyName: String = "st_intersection_agg"
 
     private[geometry] def getCellGeom(row: InternalRow, dt: DataType) = {
         dt.asInstanceOf[StructType].fields.find(_.name == "index_id").map(_.dataType) match {
-            case Some(LongType)   => indexSystem.indexToGeometry(row.getLong(1), geometryAPI)
-            case Some(StringType) => indexSystem.indexToGeometry(indexSystem.parse(row.getString(1)), geometryAPI)
+            case Some(LongType)   => indexSystem.indexToGeometry(row.getLong(1))
+            case Some(StringType) => indexSystem.indexToGeometry(indexSystem.parse(row.getString(1)))
             case _                => throw new Error("Unsupported format for chips.")
         }
     }
 
     override def update(accumulator: Array[Byte], inputRow: InternalRow): Array[Byte] = {
         val state = accumulator
-        val partialGeom = geometryAPI.geometry(state, "WKB")
+        val partialGeom = JTS.geometry(state, "WKB")
 
         val leftIndexValue = left.eval(inputRow).asInstanceOf[InternalRow]
         val rightIndexValue = right.eval(inputRow).asInstanceOf[InternalRow]
@@ -51,12 +49,12 @@ case class ST_IntersectionAgg(
             if (leftCoreFlag && rightCoreFlag) {
                 getCellGeom(leftIndexValue, leftChip.dataType)
             } else if (leftCoreFlag) {
-                geometryAPI.geometry(rightIndexValue.getBinary(2), "WKB")
+                JTS.geometry(rightIndexValue.getBinary(2), "WKB")
             } else if (rightCoreFlag) {
-                geometryAPI.geometry(leftIndexValue.getBinary(2), "WKB")
+                JTS.geometry(leftIndexValue.getBinary(2), "WKB")
             } else {
-                val leftChipGeom = geometryAPI.geometry(leftIndexValue.getBinary(2), "WKB")
-                val rightChipGeom = geometryAPI.geometry(rightIndexValue.getBinary(2), "WKB")
+                val leftChipGeom = JTS.geometry(leftIndexValue.getBinary(2), "WKB")
+                val rightChipGeom = JTS.geometry(rightIndexValue.getBinary(2), "WKB")
                 leftChipGeom.intersection(rightChipGeom)
             }
 
@@ -66,8 +64,8 @@ case class ST_IntersectionAgg(
     override def merge(accumulator: Array[Byte], input: Array[Byte]): Array[Byte] = {
         val leftPartial = accumulator
         val rightPartial = input
-        val leftPartialGeom = geometryAPI.geometry(leftPartial, "WKB")
-        val rightPartialGeom = geometryAPI.geometry(rightPartial, "WKB")
+        val leftPartialGeom = JTS.geometry(leftPartial, "WKB")
+        val rightPartialGeom = JTS.geometry(rightPartial, "WKB")
         val result = leftPartialGeom.union(rightPartialGeom)
         result.toWKB
     }

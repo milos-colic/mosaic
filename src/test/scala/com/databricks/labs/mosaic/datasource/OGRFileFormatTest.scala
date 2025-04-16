@@ -3,7 +3,7 @@ package com.databricks.labs.mosaic.datasource
 import com.databricks.labs.mosaic.expressions.util.OGRReadeWithOffset
 import com.databricks.labs.mosaic.functions.MosaicContext
 import com.databricks.labs.mosaic.utils.PathUtils
-import com.databricks.labs.mosaic.{H3, JTS}
+import com.databricks.labs.mosaic.H3
 import org.apache.spark.sql.QueryTest
 import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.test.SharedSparkSessionGDAL
@@ -149,7 +149,7 @@ class OGRFileFormatTest extends QueryTest with SharedSparkSessionGDAL {
     test("OGRFileFormat should handle partial schema: ISSUE 351") {
         assume(System.getProperty("os.name") == "Linux")
         spark.sparkContext.setLogLevel("ERROR")
-        val mc = MosaicContext.build(H3, JTS)
+        val mc = MosaicContext.build(H3)
         import mc.functions._
 
         val issue351 = "/binary/issue351/"
@@ -161,10 +161,10 @@ class OGRFileFormatTest extends QueryTest with SharedSparkSessionGDAL {
             .option("vsizip", "true")
             .load(filePath)
             .limit(1)
-            .withColumn("geom", st_setsrid(st_geomfromwkt(col("geom_0")), lit(27700)))
+            .withColumn("geom", st_bufferloop(col("geom_o"), lit(1), lit(2)))
 
         noException should be thrownBy
-            lad_df.select(st_astext(st_transform(col("geom"), lit(4326)))).take(1)
+            lad_df.select(st_bufferloop(col("geom"), lit(2), lit(3))).take(1)
     }
 
 }

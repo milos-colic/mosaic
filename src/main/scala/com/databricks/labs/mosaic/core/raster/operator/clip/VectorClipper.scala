@@ -1,7 +1,6 @@
 package com.databricks.labs.mosaic.core.raster.operator.clip
 
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometry
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
+import com.databricks.labs.mosaic.core.jts.JTSGeometry
 import com.databricks.labs.mosaic.core.raster.gdal.MosaicRasterGDAL
 import com.databricks.labs.mosaic.utils.PathUtils
 import org.gdal.gdal.gdal
@@ -49,22 +48,20 @@ object VectorClipper {
       *
       * @param geometry
       *   The geometry to clip by.
-      * @param srcCrs
+      * @param geomCRS
       *   The geometry CRS.
-      * @param dstCrs
-      *   The raster CRS.
-      * @param geometryAPI
-      *   The geometry API.
+      * @param raster
+      *   The raster.
       * @return
       *   The shapefile name.
       */
-    def generateClipper(geometry: MosaicGeometry, geomCRS: SpatialReference, raster: MosaicRasterGDAL, geometryAPI: GeometryAPI): String = {
+    def generateClipper(geometry: JTSGeometry, geomCRS: SpatialReference, raster: MosaicRasterGDAL): String = {
         val rasterCRS = raster.getSpatialReference
         val shapeFileName = getShapefileName
         var shpDataSource = getShapefile(shapeFileName)
         val geomSrcCRS = if (geomCRS == null) rasterCRS else geomCRS
 
-        val projectedGeom = geometry.osrTransformCRS(geomSrcCRS, rasterCRS, geometryAPI)
+        val projectedGeom = geometry.osrTransformCRS(geomSrcCRS, rasterCRS)
 
         val factor = 0.5 * raster.pixelDiagSize
         val pixelArea = Math.abs(raster.pixelXSize * raster.pixelYSize)

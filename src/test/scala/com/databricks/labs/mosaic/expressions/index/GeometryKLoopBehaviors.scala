@@ -57,8 +57,7 @@ trait GeometryKLoopBehaviors extends MosaicSpatialQueryTest {
           lit(wkt).expr,
           lit(resolution).expr,
           lit(k).expr,
-          mc.getIndexSystem,
-          mc.getGeometryAPI.name
+          mc.getIndexSystem
         )
 
         mc.getIndexSystem match {
@@ -71,8 +70,7 @@ trait GeometryKLoopBehaviors extends MosaicSpatialQueryTest {
           lit(10).expr,
           lit(resolution).expr,
           lit(true).expr,
-          mc.getIndexSystem,
-          mc.getGeometryAPI.name
+          mc.getIndexSystem
         )
 
         an[Error] should be thrownBy badExpr.inputTypes

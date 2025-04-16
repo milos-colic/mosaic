@@ -1,6 +1,5 @@
 package com.databricks.labs.mosaic.datasource.multiread
 
-import com.databricks.labs.mosaic.JTS
 import com.databricks.labs.mosaic.core.index.H3IndexSystem
 import com.databricks.labs.mosaic.functions.MosaicContext
 import com.databricks.labs.mosaic.test.MosaicSpatialQueryTest
@@ -17,7 +16,7 @@ class RasterAsGridReaderTest extends MosaicSpatialQueryTest with SharedSparkSess
 
     test("Read ECMWF netcdf with Raster As Grid Reader") {
         assume(System.getProperty("os.name") == "Linux")
-        val mc = MosaicContext.build(H3IndexSystem, JTS)
+        val mc = MosaicContext.build(H3IndexSystem)
         mc.register(spark)
 
 
@@ -46,7 +45,7 @@ class RasterAsGridReaderTest extends MosaicSpatialQueryTest with SharedSparkSess
 
     test("Read grib with Raster As Grid Reader", ExcludeLocalTag) {
         assume(System.getProperty("os.name") == "Linux")
-        MosaicContext.build(H3IndexSystem, JTS)
+        MosaicContext.build(H3IndexSystem)
 
         val grib = "/binary/grib-cams/"
         val filePath = getClass.getResource(grib).getPath
@@ -69,7 +68,7 @@ class RasterAsGridReaderTest extends MosaicSpatialQueryTest with SharedSparkSess
 
     test("Read tif with Raster As Grid Reader") {
         assume(System.getProperty("os.name") == "Linux")
-        MosaicContext.build(H3IndexSystem, JTS)
+        MosaicContext.build(H3IndexSystem)
 
         val tif = "/modis/MCD43A4.A2018185.h10v07.006.2018194033728_B01.TIF"
         val filePath = getClass.getResource(tif).getPath
@@ -91,7 +90,7 @@ class RasterAsGridReaderTest extends MosaicSpatialQueryTest with SharedSparkSess
 
     test("Read zarr with Raster As Grid Reader") {
         assume(System.getProperty("os.name") == "Linux")
-        MosaicContext.build(H3IndexSystem, JTS)
+        MosaicContext.build(H3IndexSystem)
 
         val zarr = "/binary/zarr-example/"
         val filePath = getClass.getResource(zarr).getPath

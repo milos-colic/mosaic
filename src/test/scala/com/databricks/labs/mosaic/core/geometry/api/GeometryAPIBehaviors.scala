@@ -1,6 +1,6 @@
 package com.databricks.labs.mosaic.core.geometry.api
 
-import com.databricks.labs.mosaic.core.geometry.point.MosaicPoint
+import com.databricks.labs.mosaic.core.jts.{JTS, JTSPoint}
 import com.databricks.labs.mosaic.core.types._
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.types._
@@ -11,8 +11,8 @@ import org.scalatest.matchers.should.Matchers.{an, convertToAnyShouldWrapper}
 
 trait GeometryAPIBehaviors { this: AnyFunSuite =>
 
-    def serializeDeserializeBehavior(geometryAPIName: String, point: MosaicPoint): Unit = {
-        val geometryAPI = GeometryAPI.apply(geometryAPIName)
+    def serializeDeserializeBehavior(point: JTSPoint): Unit = {
+        val geometryAPI = JTS
 
         val wktRow = InternalRow.fromSeq(Seq(UTF8String.fromString(point.toWKT)))
         val wkbRow = InternalRow.fromSeq(Seq(point.toWKB))

@@ -1,9 +1,7 @@
 package com.databricks.labs.mosaic.sql.extensions
 
 import com.databricks.labs.mosaic._
-import com.databricks.labs.mosaic.core.geometry.api.JTS
 import com.databricks.labs.mosaic.core.index.{BNGIndexSystem, H3IndexSystem}
-import com.databricks.labs.mosaic.core.raster.api.GDAL
 import com.databricks.labs.mosaic.functions.MosaicContext
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSessionExtensions
@@ -28,16 +26,15 @@ class MosaicSQL extends (SparkSessionExtensions => Unit) with Logging {
     override def apply(ext: SparkSessionExtensions): Unit = {
         ext.injectCheckRule(spark => {
             val indexSystem = spark.conf.get(MOSAIC_INDEX_SYSTEM)
-            val geometryAPI = spark.conf.get(MOSAIC_GEOMETRY_API)
             // spark.conf.get will throw an Exception if the key is not found.
             // Since GDAL is optional, we need to handle the case where the key is not found.
             // Fixes issue #297.
-            val mosaicContext = (indexSystem, geometryAPI) match {
-                case ("H3", "JTS")   => MosaicContext.build(H3IndexSystem, JTS)
-                case ("BNG", "JTS")  => MosaicContext.build(BNGIndexSystem, JTS)
-                case (is, gapi) => throw new Error(s"Index system, geometry API and rasterAPI: ($is, $gapi) not supported.")
+            val mosaicContext = indexSystem match {
+                case "H3"   => MosaicContext.build(H3IndexSystem)
+                case "BNG"  => MosaicContext.build(BNGIndexSystem)
+                case is => throw new Error(s"Index system $is not supported.")
             }
-            logInfo(s"Registering Mosaic SQL Extensions ($indexSystem, $geometryAPI).")
+            logInfo(s"Registering Mosaic SQL Extensions ($indexSystem).")
             mosaicContext.register(spark)
             // NOP rule. This rule is specified only to respect syntax.
             _ => ()

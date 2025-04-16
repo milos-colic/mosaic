@@ -1,11 +1,11 @@
 package com.databricks.labs.mosaic.expressions.index
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
+import com.databricks.labs.mosaic.core.jts.JTS
 import com.databricks.labs.mosaic.core.types.ChipType
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.{Expression, ExpressionInfo, UnsafeProjection, UnsafeRow}
 import org.apache.spark.sql.catalyst.expressions.aggregate.{ImperativeAggregate, TypedImperativeAggregate}
+import org.apache.spark.sql.catalyst.expressions.{Expression, ExpressionInfo, UnsafeProjection, UnsafeRow}
 import org.apache.spark.sql.catalyst.trees.UnaryLike
 import org.apache.spark.sql.catalyst.util.GenericArrayData
 import org.apache.spark.sql.types._
@@ -14,14 +14,12 @@ import scala.collection.mutable
 
 case class CellUnionAgg(
     inputChip: Expression,
-    geometryAPIName: String,
     indexSystem: IndexSystem,
     mutableAggBufferOffset: Int = 0,
     inputAggBufferOffset: Int = 0
 ) extends TypedImperativeAggregate[mutable.ArrayBuffer[Any]]
       with UnaryLike[Expression] {
 
-    val geometryAPI: GeometryAPI = GeometryAPI.apply(geometryAPIName)
     override lazy val deterministic: Boolean = true
     override val child: Expression = inputChip
     override val nullable: Boolean = false
@@ -50,7 +48,7 @@ case class CellUnionAgg(
             buffer.head
             // buffer has only boundary cells and union operation is associative
             val union =
-                buffer.iterator.map(_.asInstanceOf[InternalRow]).map(r => geometryAPI.geometry(r.getBinary(2), "WKB")).reduce(_.union(_))
+                buffer.iterator.map(_.asInstanceOf[InternalRow]).map(r => JTS.geometry(r.getBinary(2), "WKB")).reduce(_.union(_))
             // the intersection _could_ create a new core chip. Leave this check out for performance reasons.
             InternalRow(false, index_id, union.toWKB)
         } else {

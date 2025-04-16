@@ -1,7 +1,7 @@
 package com.databricks.labs.mosaic.expressions.raster
 
-import com.databricks.labs.mosaic.core.geometry.api.JTS
 import com.databricks.labs.mosaic.core.index.H3IndexSystem
+import com.databricks.labs.mosaic.core.jts.JTS
 import org.apache.spark.sql.QueryTest
 import org.apache.spark.sql.catalyst.expressions.CodegenObjectFactoryMode
 import org.apache.spark.sql.internal.SQLConf
@@ -25,7 +25,7 @@ class RST_ReTileTest extends QueryTest with SharedSparkSessionGDAL with RST_ReTi
     test("Testing RST_ReTile with manual GDAL registration (H3, JTS).") {
         noCodegen {
             assume(System.getProperty("os.name") == "Linux")
-            retileBehavior(H3IndexSystem, JTS)
+            retileBehavior(H3IndexSystem)
         }
     }
 

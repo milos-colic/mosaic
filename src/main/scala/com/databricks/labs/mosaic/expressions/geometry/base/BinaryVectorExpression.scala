@@ -1,8 +1,7 @@
 package com.databricks.labs.mosaic.expressions.geometry.base
 
 import com.databricks.labs.mosaic.codegen.format.ConvertToCodeGen
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometry
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
+import com.databricks.labs.mosaic.core.jts.{JTS, JTSGeometry}
 import com.databricks.labs.mosaic.expressions.base.GenericExpressionFactory
 import com.databricks.labs.mosaic.functions.MosaicExpressionConfig
 import org.apache.spark.sql.catalyst.expressions.{BinaryExpression, Expression, NullIntolerant}
@@ -40,10 +39,8 @@ abstract class BinaryVectorExpression[T <: Expression: ClassTag](
 
     override def right: Expression = rightGeometryExpr
 
-    override def geometryAPI: GeometryAPI = getGeometryAPI(expressionConfig)
-
     /**
-      * The function to be overriden by the extending class. It is called when
+      * The function to be overridden by the extending class. It is called when
       * the expression is evaluated. It provides the vector geometries to the
       * expression. It abstracts spark serialization from the caller.
       * @param leftGeometry
@@ -53,10 +50,10 @@ abstract class BinaryVectorExpression[T <: Expression: ClassTag](
       * @return
       *   A result of the expression.
       */
-    def geometryTransform(leftGeometry: MosaicGeometry, rightGeometry: MosaicGeometry): Any
+    def geometryTransform(leftGeometry: JTSGeometry, rightGeometry: JTSGeometry): Any
 
     /**
-      * Evaluation of the expression. It evaluates the geometry and deserialises
+      * Evaluation of the expression. It evaluates the geometry and deserializes
       * the geometry.
       * @param leftGeometryRow
       *   The row containing the left/first geometry.
@@ -66,14 +63,14 @@ abstract class BinaryVectorExpression[T <: Expression: ClassTag](
       *   The result of the expression.
       */
     override def nullSafeEval(leftGeometryRow: Any, rightGeometryRow: Any): Any = {
-        val leftGeometry = geometryAPI.geometry(leftGeometryRow, leftGeometryExpr.dataType)
-        val rightGeometry = geometryAPI.geometry(rightGeometryRow, rightGeometryExpr.dataType)
+        val leftGeometry = JTS.geometry(leftGeometryRow, leftGeometryExpr.dataType)
+        val rightGeometry = JTS.geometry(rightGeometryRow, rightGeometryExpr.dataType)
         val result = geometryTransform(leftGeometry, rightGeometry)
         serialise(result, returnsGeometry, leftGeometryExpr.dataType)
     }
 
     /**
-      * The function to be overriden by the extending class. It is called when
+      * The function to be overridden by the extending class. It is called when
       * the expression codegen is evaluated. It abstracts spark serialization
       * and deserialization from the caller codegen.
       * @param leftMosaicGeometryRef
@@ -110,13 +107,13 @@ abstract class BinaryVectorExpression[T <: Expression: ClassTag](
           ctx,
           ev,
           (leftEval, rightEval) => {
-              val (leftInCode, leftGeomInRef) = ConvertToCodeGen.readGeometryCode(ctx, leftEval, leftGeometryExpr.dataType, geometryAPI)
-              val (rightInCode, rightGeomInRef) = ConvertToCodeGen.readGeometryCode(ctx, rightEval, rightGeometryExpr.dataType, geometryAPI)
+              val (leftInCode, leftGeomInRef) = ConvertToCodeGen.readGeometryCode(ctx, leftEval, leftGeometryExpr.dataType)
+              val (rightInCode, rightGeomInRef) = ConvertToCodeGen.readGeometryCode(ctx, rightEval, rightGeometryExpr.dataType)
               val leftMosaicGeomRef = mosaicGeometryRef(leftGeomInRef)
               val rightMosaicGeomRef = mosaicGeometryRef(rightGeomInRef)
               val (expressionCode, resultRef) = geometryCodeGen(leftMosaicGeomRef, rightMosaicGeomRef, ctx)
               val (serialiseCode, serialisedRef) = serialiseCodegen(resultRef, returnsGeometry, leftGeometryExpr.dataType, ctx)
-              geometryAPI.codeGenTryWrap(s"""
+              JTS.codeGenTryWrap(s"""
                                             |$leftInCode
                                             |$rightInCode
                                             |$expressionCode

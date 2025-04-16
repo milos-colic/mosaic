@@ -1,7 +1,8 @@
 package com.databricks.labs.mosaic.expressions.index
 
+import com.databricks.labs.mosaic.expressions.SpatialSQLAPIsMock.st_centroid
 import com.databricks.labs.mosaic.functions.MosaicContext
-import com.databricks.labs.mosaic.test.{mocks, MosaicSpatialQueryTest}
+import com.databricks.labs.mosaic.test.{MosaicSpatialQueryTest, mocks}
 import com.databricks.labs.mosaic.test.mocks.getBoroughs
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
@@ -56,8 +57,7 @@ trait CellKRingExplodeBehaviors extends MosaicSpatialQueryTest {
         val cellKRingExplodeExpr = CellKRingExplode(
           lit(wkt).expr,
           lit(k).expr,
-          mc.getIndexSystem,
-          mc.getGeometryAPI.name
+          mc.getIndexSystem
         )
         val withNull = cellKRingExplodeExpr.copy(cellId = lit(null).expr)
 
@@ -69,8 +69,7 @@ trait CellKRingExplodeBehaviors extends MosaicSpatialQueryTest {
         val badExpr = CellKRingExplode(
           lit(10).expr,
           lit(k).expr,
-          mc.getIndexSystem,
-          mc.getGeometryAPI.name
+          mc.getIndexSystem
         )
 
         badExpr.checkInputDataTypes().isFailure shouldEqual true

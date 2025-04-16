@@ -60,8 +60,7 @@ trait GeometryKLoopExplodeBehaviors extends MosaicSpatialQueryTest {
           lit(wkt).expr,
           lit(resolution).expr,
           lit(k).expr,
-          mc.getIndexSystem,
-          mc.getGeometryAPI.name
+          mc.getIndexSystem
         )
 
         val withNull = geomKLoopExplodeExpr.copy(geom = lit(null).expr)
@@ -75,8 +74,7 @@ trait GeometryKLoopExplodeBehaviors extends MosaicSpatialQueryTest {
           lit(10).expr,
           lit(resolution).expr,
           lit(k).expr,
-          mc.getIndexSystem,
-          mc.getGeometryAPI.name
+          mc.getIndexSystem
         )
 
         badExpr.checkInputDataTypes().isFailure shouldEqual true

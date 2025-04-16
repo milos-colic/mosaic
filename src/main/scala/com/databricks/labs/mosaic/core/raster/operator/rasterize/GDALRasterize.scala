@@ -1,7 +1,6 @@
 package com.databricks.labs.mosaic.core.raster.operator.rasterize
 
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometry
-import com.databricks.labs.mosaic.core.geometry.point.MosaicPoint
+import com.databricks.labs.mosaic.core.jts.{JTSGeometry, JTSPoint}
 import com.databricks.labs.mosaic.core.raster.api.GDAL
 import com.databricks.labs.mosaic.core.raster.gdal.{MosaicRasterGDAL, MosaicRasterWriteOptions}
 import com.databricks.labs.mosaic.core.raster.operator.gdal.OperatorOptions
@@ -35,14 +34,14 @@ object GDALRasterize {
      * @return A MosaicRasterGDAL object containing the generated raster.
      */
     def executeRasterize(
-        geoms: Seq[MosaicGeometry],
-        values: Option[Seq[Double]],
-        origin: MosaicPoint,
-        xWidth: Int,
-        yWidth: Int,
-        xSize: Double,
-        ySize: Double,
-        noDataValue: Double = Double.NaN
+                            geoms: Seq[JTSGeometry],
+                            values: Option[Seq[Double]],
+                            origin: JTSPoint,
+                            xWidth: Int,
+                            yWidth: Int,
+                            xSize: Double,
+                            ySize: Double,
+                            noDataValue: Double = Double.NaN
     ): MosaicRasterGDAL = {
         GDAL.enable()
         val writeOptions = MosaicRasterWriteOptions.GTiff
@@ -109,12 +108,12 @@ object GDALRasterize {
      * @param geoms The geometries to write to the DataSource.
      * @param valuesToBurn The values to burn into the raster.
      * @param geometryType The type of geometry to write to the DataSource.
-     * @param format The format of the DataSource (driver the should be used).
+     * @param format The format of the DataSource (driver that should be used).
      * @param path The path to write the DataSource to.
      * @return A DataSource object containing the geometries and values.
      */
     def writeToDataSource(
-        geoms: Seq[MosaicGeometry],
+        geoms: Seq[JTSGeometry],
         valuesToBurn: Seq[Double],
         geometryType: Option[GeometryTypeEnum.Value],
         format: String="Memory",
@@ -138,7 +137,7 @@ object GDALRasterize {
 
         geoms
             .zip(valuesToBurn)
-            .foreach({ case (g: MosaicGeometry, v: Double) =>
+            .foreach({ case (g: JTSGeometry, v: Double) =>
                 val geom = CreateGeometryFromWkb(g.toWKB)
                 val featureDefn = layer.GetLayerDefn()
                 val feature = new Feature(featureDefn)

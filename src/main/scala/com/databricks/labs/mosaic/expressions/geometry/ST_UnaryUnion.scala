@@ -1,12 +1,12 @@
 package com.databricks.labs.mosaic.expressions.geometry
 
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometry
+import com.databricks.labs.mosaic.core.jts.JTSGeometry
 import com.databricks.labs.mosaic.expressions.base.{GenericExpressionFactory, WithExpressionInfo}
 import com.databricks.labs.mosaic.expressions.geometry.base.UnaryVectorExpression
 import com.databricks.labs.mosaic.functions.MosaicExpressionConfig
 import org.apache.spark.sql.catalyst.analysis.FunctionRegistry.FunctionBuilder
-import org.apache.spark.sql.catalyst.expressions.codegen.CodegenContext
 import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.expressions.codegen.CodegenContext
 import org.apache.spark.sql.types.DataType
 
 case class ST_UnaryUnion(
@@ -16,7 +16,7 @@ case class ST_UnaryUnion(
 
     override def dataType: DataType = inputGeom.dataType
 
-    override def geometryTransform(geometry: MosaicGeometry): Any = geometry.unaryUnion
+    override def geometryTransform(geometry: JTSGeometry): Any = geometry.unaryUnion
 
     override def geometryCodeGen(geometryRef: String, ctx: CodegenContext): (String, String) = {
         val resultRef = ctx.freshName("result")

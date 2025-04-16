@@ -1,8 +1,9 @@
 package com.databricks.labs.mosaic.expressions.index
 
 import com.databricks.labs.mosaic.core.index._
+import com.databricks.labs.mosaic.expressions.SpatialSQLAPIsMock.st_centroid
 import com.databricks.labs.mosaic.functions.MosaicContext
-import com.databricks.labs.mosaic.test.{mocks, MosaicSpatialQueryTest}
+import com.databricks.labs.mosaic.test.{MosaicSpatialQueryTest, mocks}
 import com.databricks.labs.mosaic.test.mocks.getBoroughs
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.{col, lit}
@@ -53,8 +54,7 @@ trait CellKLoopBehaviors extends MosaicSpatialQueryTest {
         val cellKLoopExpr = CellKLoop(
           lit(wkt).expr,
           lit(k).expr,
-          mc.getIndexSystem,
-          mc.getGeometryAPI.name
+          mc.getIndexSystem
         )
 
         mc.getIndexSystem match {
@@ -66,8 +66,7 @@ trait CellKLoopBehaviors extends MosaicSpatialQueryTest {
         val badExpr = CellKLoop(
           lit(10).expr,
           lit(true).expr,
-          mc.getIndexSystem,
-          mc.getGeometryAPI.name
+          mc.getIndexSystem
         )
 
         an[Error] should be thrownBy badExpr.inputTypes

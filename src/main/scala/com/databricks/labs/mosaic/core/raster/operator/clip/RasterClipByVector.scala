@@ -1,7 +1,6 @@
 package com.databricks.labs.mosaic.core.raster.operator.clip
 
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometry
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
+import com.databricks.labs.mosaic.core.jts.JTSGeometry
 import com.databricks.labs.mosaic.core.raster.api.GDAL
 import com.databricks.labs.mosaic.core.raster.gdal.MosaicRasterGDAL
 import com.databricks.labs.mosaic.core.raster.operator.gdal.GDALWarp
@@ -42,11 +41,10 @@ object RasterClipByVector {
       *   A clipped raster.
       */
     def clip(
-        raster: MosaicRasterGDAL,
-        geometry: MosaicGeometry,
-        geomCRS: SpatialReference,
-        geometryAPI: GeometryAPI,
-        cutlineAllTouched: Boolean = true
+                raster: MosaicRasterGDAL,
+                geometry: JTSGeometry,
+                geomCRS: SpatialReference,
+                cutlineAllTouched: Boolean = true
     ): MosaicRasterGDAL = {
         val outShortName = raster.getDriversShortName
 
@@ -54,7 +52,7 @@ object RasterClipByVector {
 
         val resultFileName = PathUtils.createTmpFilePath(GDAL.getExtension(outShortName))
 
-        val shapeFileName = VectorClipper.generateClipper(geometry, geomCRS, raster, geometryAPI)
+        val shapeFileName = VectorClipper.generateClipper(geometry, geomCRS, raster)
 
         // For -wo consult https://gdal.org/doxygen/structGDALWarpOptions.html
         val result = GDALWarp.executeWarp(

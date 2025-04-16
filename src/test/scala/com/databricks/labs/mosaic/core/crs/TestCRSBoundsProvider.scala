@@ -1,6 +1,5 @@
 package com.databricks.labs.mosaic.core.crs
 
-import com.databricks.labs.mosaic.core.geometry.api.JTS
 import com.databricks.labs.mosaic.core.types.{HexType, InternalGeometryType, JSONType}
 import com.databricks.labs.mosaic.expressions.geometry.base.RequiresCRS
 import org.apache.spark.sql.types.{BinaryType, StringType}
@@ -10,7 +9,7 @@ import org.scalatest.matchers.should.Matchers._
 class TestCRSBoundsProvider extends AnyFlatSpec {
 
     "CRSBoundsProvider" should "load resource file and return correct bounds for EPSG:4326 and EPSG:27700 for JTS geometry API" in {
-        val boundsProvider = CRSBoundsProvider(geometryAPI = JTS)
+        val boundsProvider = CRSBoundsProvider()
         val bounds4326 = boundsProvider.bounds("EPSG", 4326)
         val bounds27700 = boundsProvider.bounds("EPSG", 27700)
         bounds4326.lowerLeft.getX shouldBe -180.00

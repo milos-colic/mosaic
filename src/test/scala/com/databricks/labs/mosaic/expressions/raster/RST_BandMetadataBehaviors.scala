@@ -1,6 +1,5 @@
 package com.databricks.labs.mosaic.expressions.raster
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
 import com.databricks.labs.mosaic.functions.MosaicContext
 import org.apache.spark.sql.QueryTest
@@ -9,16 +8,14 @@ import org.scalatest.matchers.should.Matchers._
 
 trait RST_BandMetadataBehaviors extends QueryTest {
 
-    def bandMetadataBehavior(indexSystem: IndexSystem, geometryAPI: GeometryAPI): Unit = {
+    def bandMetadataBehavior(indexSystem: IndexSystem): Unit = {
         val sc = spark
         spark.sparkContext.setLogLevel("ERROR")
-        val mc = MosaicContext.build(indexSystem, geometryAPI)
+        val mc = MosaicContext.build(indexSystem)
         mc.register()
 
         import mc.functions._
         import sc.implicits._
-
-        noException should be thrownBy MosaicContext.geometryAPI
 
         val rastersInMemory = spark.read
             .format("gdal")

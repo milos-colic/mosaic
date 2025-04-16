@@ -23,13 +23,11 @@ trait MosaicContextBehaviors extends MosaicSpatialQueryTest {
     // noinspection EmptyParenMethodAccessedAsParameterless
     def creationOfContext(mosaicContext: MosaicContext): Unit = {
         val indexSystem = mosaicContext.getIndexSystem
-        val geometryAPI = mosaicContext.getGeometryAPI
         spark.sparkContext.setLogLevel("ERROR")
         MosaicContext.reset()
         an[Error] should be thrownBy MosaicContext.context
-        val mc = MosaicContext.build(indexSystem, geometryAPI)
+        val mc = MosaicContext.build(indexSystem)
         MosaicContext.indexSystem shouldEqual indexSystem
-        MosaicContext.geometryAPI shouldEqual geometryAPI
         MosaicContext.indexSystem match {
             case BNGIndexSystem => mc.getIndexSystem.getCellIdDataType shouldEqual StringType
             case H3IndexSystem  => mc.getIndexSystem.getCellIdDataType shouldEqual LongType
@@ -89,8 +87,6 @@ trait MosaicContextBehaviors extends MosaicSpatialQueryTest {
         noException should be thrownBy getFunc("st_area").apply(Seq(multiPolygon.expr))
         noException should be thrownBy getFunc("st_centroid").apply(Seq(pointWkt))
         noException should be thrownBy getFunc("st_geomfromwkt").apply(Seq(multiPolygon.expr))
-        noException should be thrownBy getFunc("st_geomfromwkb").apply(Seq(st_aswkb(multiPolygon).expr))
-        noException should be thrownBy getFunc("st_geomfromgeojson").apply(Seq(st_asgeojson(multiPolygon).expr))
         noException should be thrownBy getFunc("convert_to_hex").apply(Seq(multiPolygon.expr))
         noException should be thrownBy getFunc("convert_to_wkt").apply(Seq(multiPolygon.expr))
         noException should be thrownBy getFunc("convert_to_wkb").apply(Seq(multiPolygon.expr))
@@ -165,7 +161,6 @@ trait MosaicContextBehaviors extends MosaicSpatialQueryTest {
         noException should be thrownBy getFunc("grid_geometrykloopexplode").apply(Seq(multiPolygon.expr, lit(5).expr, lit(5).expr))
 
         noException should be thrownBy getFunc("st_dump").apply(Seq(multiPolygon.expr))
-        noException should be thrownBy getFunc("try_sql").apply(Seq(st_area(multiPolygon).expr))
 
         noException should be thrownBy getFunc("index_geometry").apply(Seq(multiPolygon.expr, lit(5).expr))
         noException should be thrownBy getFunc("mosaic_explode").apply(Seq(multiPolygon.expr, lit(5).expr))
@@ -282,7 +277,7 @@ object MosaicContextBehaviors extends MockFactory {
         val ix = stub[IndexSystem]
         ix.getCellIdDataType _ when () returns LongType
         ix.name _ when () returns H3.name
-        MosaicContext.build(H3IndexSystem, JTS)
+        MosaicContext.build(H3IndexSystem)
     }
 
 }

@@ -1,6 +1,7 @@
 package com.databricks.labs.mosaic.models.knn
 
 import com.databricks.labs.mosaic.core.index._
+import com.databricks.labs.mosaic.expressions.SpatialSQLAPIsMock.st_buffer
 import com.databricks.labs.mosaic.functions.MosaicContext
 import com.databricks.labs.mosaic.test.mocks.getBoroughs
 import com.databricks.labs.mosaic.test.MosaicSpatialQueryTest

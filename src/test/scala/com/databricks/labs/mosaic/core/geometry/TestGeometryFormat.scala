@@ -1,5 +1,6 @@
 package com.databricks.labs.mosaic.core.geometry
 
+import com.databricks.labs.mosaic.core.jts.GeometryFormat
 import com.databricks.labs.mosaic.core.types.{HexType, InternalGeometryType, JSONType}
 import org.apache.spark.sql.types.{BinaryType, DoubleType, StringType}
 import org.scalatest.flatspec.AnyFlatSpec

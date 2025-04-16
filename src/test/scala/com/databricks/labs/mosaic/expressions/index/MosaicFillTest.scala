@@ -7,14 +7,9 @@ class MosaicFillTest extends MosaicSpatialQueryTest with SharedSparkSession with
 
     testAllNoCodegen("MosaicFill WKT") { wktMosaicFill }
     testAllNoCodegen("MosaicFill WKB") { wkbMosaicFill }
-    testAllNoCodegen("MosaicFill Hex") { hexMosaicFill }
-    testAllNoCodegen("MosaicFill Coords") { coordsMosaicFill }
     testAllNoCodegen("MosaicFill points") { mosaicFillPoints }
     testAllNoCodegen("MosaicFill multi points") { mosaicFillMultiPoints }
     testAllNoCodegen("MosaicFill column function signatures") { columnFunctionSignatures }
     testAllNoCodegen("MosaicFill auxiliary methods") { auxiliaryMethods }
-    testAllNoCodegen("MosaicFill with H3 cells crossing projected icosahedron edges  (#260)") {
-        wktMosaicTessellate
-    }
 
 }

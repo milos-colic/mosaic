@@ -1,10 +1,8 @@
 package com.databricks.labs.mosaic.expressions.geometry
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.expressions.geometry.base.AsTileExpression
 import com.databricks.labs.mosaic.functions.MosaicExpressionConfig
 import com.databricks.labs.mosaic.gdal.MosaicGDAL
-import com.databricks.labs.mosaic.gdal.MosaicGDAL.loadOrNOOP
 import com.databricks.labs.mosaic.utils.{PathUtils, SysUtils}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.aggregate.{ImperativeAggregate, TypedImperativeAggregate}
@@ -28,7 +26,6 @@ case class ST_AsMVTTileAgg(
       with TernaryLike[Expression]
       with AsTileExpression {
 
-    val geometryAPI: GeometryAPI = GeometryAPI.apply(expressionConfig.getGeometryAPI)
     override lazy val deterministic: Boolean = true
     override val first: Expression = geometryExpr
     override val second: Expression = attributesExpr
@@ -68,7 +65,7 @@ case class ST_AsMVTTileAgg(
     }
 
     override def eval(buffer: mutable.ArrayBuffer[Any]): Any = {
-        System.load("/usr/local/src/gdal-3.9.3/build/swig/java/libgdalalljni.so")
+        MosaicGDAL.loadSharedObjects()
         ogr.RegisterAll()
         // We assume all zxyIDs are the same for all the rows in the buffer
         val zxyID = buffer.head.asInstanceOf[InternalRow].get(2, zxyIDExpr.dataType).toString
@@ -76,7 +73,7 @@ case class ST_AsMVTTileAgg(
         val driver = ogr.GetDriverByName("MVT")
         val tmpName = PathUtils.createTmpFilePath("mvt")
 
-        val srs = getSRS(buffer.head, geometryExpr, geometryAPI)
+        val srs = getSRS(buffer.head, geometryExpr)
         val tilingScheme = srs.GetAttrValue("PROJCS", 0) match {
             case "WGS 84 / Pseudo-Mercator" => tilingScheme3857
             case "WGS 84"                   => tilingScheme4326
@@ -94,7 +91,7 @@ case class ST_AsMVTTileAgg(
 
         val layer = createLayer(ds, srs, attributesExpr.dataType.asInstanceOf[StructType])
 
-        insertRows(buffer, layer, geometryExpr, geometryAPI, attributesExpr)
+        insertRows(buffer, layer, geometryExpr, attributesExpr)
 
         ds.FlushCache()
         ds.delete()

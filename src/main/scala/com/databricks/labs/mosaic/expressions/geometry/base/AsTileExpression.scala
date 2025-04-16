@@ -1,23 +1,23 @@
 package com.databricks.labs.mosaic.expressions.geometry.base
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
+import com.databricks.labs.mosaic.core.jts.JTS
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
-import org.gdal.ogr.{DataSource, FieldDefn, Geometry, Layer, Feature, ogrConstants}
+import org.gdal.ogr._
 import org.gdal.osr.SpatialReference
 
 import scala.collection.mutable
 
 trait AsTileExpression {
 
-    def getSRS(firstRow: Any, geometryExpr: Expression, geometryAPI: GeometryAPI): SpatialReference = {
+    def getSRS(firstRow: Any, geometryExpr: Expression): SpatialReference = {
         val firstGeomRaw = firstRow
             .asInstanceOf[InternalRow]
             .get(0, geometryExpr.dataType)
 
-        val firstGeom = geometryAPI.geometry(firstGeomRaw, geometryExpr.dataType)
+        val firstGeom = JTS.geometry(firstGeomRaw, geometryExpr.dataType)
         val srsOSR = firstGeom.getSpatialReferenceOSR
 
         val srs = new org.gdal.osr.SpatialReference()
@@ -56,12 +56,11 @@ trait AsTileExpression {
         buffer: mutable.ArrayBuffer[Any],
         layer: Layer,
         geometryExpr: Expression,
-        geometryAPI: GeometryAPI,
         attributesExpr: Expression
     ): Unit = {
         for (row <- buffer) {
             val geom = row.asInstanceOf[InternalRow].get(0, geometryExpr.dataType)
-            val geomOgr = Geometry.CreateFromWkb(geometryAPI.geometry(geom, geometryExpr.dataType).toWKB)
+            val geomOgr = Geometry.CreateFromWkb(JTS.geometry(geom, geometryExpr.dataType).toWKB)
             val attrs = row.asInstanceOf[InternalRow].get(1, attributesExpr.dataType)
             val feature = new Feature(layer.GetLayerDefn)
             feature.SetGeometryDirectly(geomOgr)

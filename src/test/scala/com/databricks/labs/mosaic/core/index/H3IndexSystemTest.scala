@@ -1,9 +1,8 @@
 package com.databricks.labs.mosaic.core.index
 
 import com.databricks.labs.mosaic.core.Mosaic.mosaicFill
-import com.databricks.labs.mosaic.core.geometry.api.{GeometryAPI, JTS}
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometryJTS
 import com.databricks.labs.mosaic.core.index.H3IndexSystem.indexToGeometry
+import com.databricks.labs.mosaic.core.jts.{JTS, JTSGeometry}
 import com.databricks.labs.mosaic.core.types.model.GeometryTypeEnum.{LINESTRING, MULTILINESTRING, MULTIPOINT, MULTIPOLYGON, POINT, POLYGON}
 import com.databricks.labs.mosaic.core.types.model.GeometryTypeEnum
 import com.uber.h3core.H3Core
@@ -21,18 +20,18 @@ class H3IndexSystemTest extends AnyFunSuite with Tolerance {
         val indexRes = H3IndexSystem.pointToIndex(10, 10, 10)
         noException shouldBe thrownBy { H3IndexSystem.format(indexRes) }
         noException shouldBe thrownBy { H3IndexSystem.getResolutionStr(10) }
-        noException shouldBe thrownBy { H3IndexSystem.indexToGeometry(H3IndexSystem.parse(H3IndexSystem.format(indexRes)), JTS) }
+        noException shouldBe thrownBy { H3IndexSystem.indexToGeometry(H3IndexSystem.parse(H3IndexSystem.format(indexRes))) }
         an[IllegalArgumentException] shouldBe thrownBy { H3IndexSystem.getResolution(true) }
         an[IllegalStateException] shouldBe thrownBy { H3IndexSystem.getResolution("-1") }
     }
 
     test("H3IndexSystem polyfill signatures") {
-        val geomJTS = MosaicGeometryJTS.fromWKT("POLYGON((1 2, 2 2, 2 1, 1 1, 1 2))")
-        val wrappedGeomJTS = MosaicGeometryJTS.fromWKT("POLYGON((179 2, 181 2, 181 1, 179 1, 179 2))")
-        noException shouldBe thrownBy { H3IndexSystem.polyfill(geomJTS, 10, JTS) }
-        noException shouldBe thrownBy { H3IndexSystem.polyfill(wrappedGeomJTS, 10, JTS) }
-        val expected = MosaicGeometryJTS.fromWKT("MULTIPOLYGON(((179 2, 180 2, 180 1, 179 1, 179 2)), ((-179 2, -180 2, -180 1, -179 1, -179 2)))")
-        val actualIndexes = mosaicFill(wrappedGeomJTS, 6, keepCoreGeom = true, H3IndexSystem, JTS)
+        val geomJTS = JTSGeometry.fromWKT("POLYGON((1 2, 2 2, 2 1, 1 1, 1 2))")
+        val wrappedGeomJTS = JTSGeometry.fromWKT("POLYGON((179 2, 181 2, 181 1, 179 1, 179 2))")
+        noException shouldBe thrownBy { H3IndexSystem.polyfill(geomJTS, 10) }
+        noException shouldBe thrownBy { H3IndexSystem.polyfill(wrappedGeomJTS, 10) }
+        val expected = JTSGeometry.fromWKT("MULTIPOLYGON(((179 2, 180 2, 180 1, 179 1, 179 2)), ((-179 2, -180 2, -180 1, -179 1, -179 2)))")
+        val actualIndexes = mosaicFill(wrappedGeomJTS, 6, keepCoreGeom = true, H3IndexSystem)
         val actual = actualIndexes.map(_.geom)
             .reduce(_ union _)
         actual.getArea - expected.getArea shouldEqual 0.0 +- 0.0001
@@ -114,24 +113,24 @@ class H3IndexSystemTest extends AnyFunSuite with Tolerance {
         )
 
         H3IndexSystem
-            .coerceChipGeometry(geomsWKTs1.map(MosaicGeometryJTS.fromWKT))
+            .coerceChipGeometry(geomsWKTs1.map(JTSGeometry.fromWKT))
             .map(g => GeometryTypeEnum.fromString(g.getGeometryType))
             .forall(Seq(POLYGON, MULTIPOLYGON).contains(_)) shouldBe true
         H3IndexSystem
-            .coerceChipGeometry(geomsWKTs2.map(MosaicGeometryJTS.fromWKT))
+            .coerceChipGeometry(geomsWKTs2.map(JTSGeometry.fromWKT))
             .map(g => GeometryTypeEnum.fromString(g.getGeometryType))
             .forall(Seq(LINESTRING, MULTILINESTRING).contains(_)) shouldBe true
         H3IndexSystem
-            .coerceChipGeometry(geomsWKTs3.map(MosaicGeometryJTS.fromWKT))
+            .coerceChipGeometry(geomsWKTs3.map(JTSGeometry.fromWKT))
             .map(g => GeometryTypeEnum.fromString(g.getGeometryType))
             .forall(Seq(POINT, MULTIPOINT).contains(_)) shouldBe true
-        H3IndexSystem.coerceChipGeometry(geomsWKTs4.map(MosaicGeometryJTS.fromWKT)).isEmpty shouldBe true
+        H3IndexSystem.coerceChipGeometry(geomsWKTs4.map(JTSGeometry.fromWKT)).isEmpty shouldBe true
     }
 
     test("indexToGeometry should return valid and correct geometries") {
         val h3: H3Core = H3Core.newInstance()
 
-        val jtsGeomAPI: GeometryAPI = GeometryAPI("JTS")
+        val jtsGeomAPI = JTS
         val apis = Seq(jtsGeomAPI)
 
         val baseCells = h3.getRes0Indexes.asScala.toList
@@ -142,14 +141,14 @@ class H3IndexSystemTest extends AnyFunSuite with Tolerance {
         val lvl1CellsStr = lvl1Cells.map(h3.h3ToString(_))
         val testCellsStr = Seq(baseCellsStr, lvl1CellsStr)
 
-        apis.foreach(api => {
+        apis.foreach(_ => {
             testCells.foreach(cells => {
-                val geoms = cells.map(indexToGeometry(_, api))
+                val geoms = cells.map(indexToGeometry(_))
                 geoms.foreach(geom => geom.isValid shouldBe true)
                 geoms.foldLeft(0.0)((acc, geom) => acc + geom.getArea) shouldBe ((180.0 * 360.0) +- 0.0001)
             })
             testCellsStr.foreach(cells => {
-                val geoms = cells.map(H3IndexSystem.parse).map(indexToGeometry(_, api))
+                val geoms = cells.map(H3IndexSystem.parse).map(indexToGeometry)
                 geoms.foreach(geom => geom.isValid shouldBe true)
                 geoms.foldLeft(0.0)((acc, geom) => acc + geom.getArea) shouldBe ((180.0 * 360.0) +- 0.0001)
             })

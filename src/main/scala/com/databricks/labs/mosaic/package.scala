@@ -1,6 +1,5 @@
 package com.databricks.labs
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
 import com.databricks.labs.mosaic.datasource.multiread.MosaicDataFrameReader
 import org.apache.spark.sql.SparkSession
@@ -8,7 +7,6 @@ import org.apache.spark.sql.SparkSession
 //noinspection ScalaWeakerAccess
 package object mosaic {
 
-    val JTS: GeometryAPI = mosaic.core.geometry.api.JTS
     val H3: IndexSystem = mosaic.core.index.H3IndexSystem
     val BNG: IndexSystem = mosaic.core.index.BNGIndexSystem
 

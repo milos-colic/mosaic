@@ -1,8 +1,8 @@
 package com.databricks.labs.mosaic.expressions.index
 
 import com.databricks.labs.mosaic.core.Mosaic
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
-import com.databricks.labs.mosaic.core.index.{IndexSystem, IndexSystemFactory}
+import com.databricks.labs.mosaic.core.index.IndexSystem
+import com.databricks.labs.mosaic.core.jts.JTS
 import com.databricks.labs.mosaic.core.types._
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
@@ -17,13 +17,10 @@ case class MosaicExplode(
     geom: Expression,
     resolution: Expression,
     keepCoreGeom: Expression,
-    indexSystem: IndexSystem,
-    geometryAPIName: String
+    indexSystem: IndexSystem
 ) extends CollectionGenerator
       with Serializable
       with CodegenFallback {
-
-    lazy val geometryAPI: GeometryAPI = GeometryAPI(geometryAPIName)
 
     override def position: Boolean = false
 
@@ -70,10 +67,10 @@ case class MosaicExplode(
     override def eval(input: InternalRow): TraversableOnce[InternalRow] = {
         val geomRaw = geom.eval(input)
         val resolutionVal = indexSystem.getResolution(resolution.eval(input))
-        val geometryVal = geometryAPI.geometry(geomRaw, geom.dataType)
+        val geometryVal = JTS.geometry(geomRaw, geom.dataType)
         val keepCoreGeomVal = keepCoreGeom.eval(input).asInstanceOf[Boolean]
 
-        Mosaic.getChips(geometryVal, resolutionVal, keepCoreGeomVal, indexSystem, geometryAPI)
+        Mosaic.getChips(geometryVal, resolutionVal, keepCoreGeomVal, indexSystem)
             .map(_.formatCellId(indexSystem))
             .map(row => InternalRow.fromSeq(Seq(row.serialize)))
     }

@@ -1,7 +1,8 @@
 package com.databricks.labs.mosaic.core
 
-import com.databricks.labs.mosaic.{H3, JTS}
+import com.databricks.labs.mosaic.H3
 import com.databricks.labs.mosaic.core.index._
+import com.databricks.labs.mosaic.core.jts.JTS
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.must.Matchers.be
 import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
@@ -14,7 +15,7 @@ class TestMosaic extends AnyFunSuite {
           "POLYGON ((4.42 51.78, 4.38 51.78, 4.39 51.83, 4.40 51.83, 4.41 51.8303, 4.417 51.8295, 4.42 51.83, 4.44 51.81, 4.42 51.78))",
           "WKT"
         )
-        val result = Mosaic.mosaicFill(geom, 7, keepCoreGeom = true, H3IndexSystem, JTS)
+        val result = Mosaic.mosaicFill(geom, 7, keepCoreGeom = true, H3IndexSystem)
 
         assert(result.length == 10)
         assert(result.map(x => x.index).distinct.length == 10)
@@ -44,7 +45,7 @@ class TestMosaic extends AnyFunSuite {
         val geom = JTS.geometry(polygon, "WKT")
         val conf = GridConf(-180, 180, -90, 90, 2, 360, 180)
         val grid = CustomIndexSystem(conf)
-        val result = Mosaic.geometryKRing(geom, 7, 1, grid, JTS)
+        val result = Mosaic.geometryKRing(geom, 7, 1, grid)
 
         assert(result.nonEmpty)
     }
@@ -56,7 +57,7 @@ class TestMosaic extends AnyFunSuite {
 
         val geom = JTS.geometry(wkt, "WKT")
 
-        val result = Mosaic.mosaicFill(geom, BNGIndexSystem.resolutionMap("1km"), keepCoreGeom = true, BNGIndexSystem, JTS)
+        val result = Mosaic.mosaicFill(geom, BNGIndexSystem.resolutionMap("1km"), keepCoreGeom = true, BNGIndexSystem)
 
         val chipArea = result.map(_.geom.getArea).sum
         val expectedArea = geom.getArea
@@ -73,7 +74,7 @@ class TestMosaic extends AnyFunSuite {
         val bbox = JTS.geometry(wkt, "WKT")
 
         val cells = Mosaic
-            .mosaicFill(bbox, 6, keepCoreGeom = false, H3, JTS)
+            .mosaicFill(bbox, 6, keepCoreGeom = false, H3)
             .map(_.indexAsLong(H3))
 
         cells.length should be > 0

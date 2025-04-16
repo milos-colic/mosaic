@@ -1,7 +1,7 @@
 package com.databricks.labs.mosaic.expressions.raster
 
-import com.databricks.labs.mosaic.core.geometry.api.JTS
 import com.databricks.labs.mosaic.core.index.H3IndexSystem
+import com.databricks.labs.mosaic.core.jts.JTS
 import org.apache.spark.sql.QueryTest
 import org.apache.spark.sql.catalyst.expressions.CodegenObjectFactoryMode
 import org.apache.spark.sql.internal.SQLConf
@@ -25,14 +25,14 @@ class RST_MedianTest extends QueryTest with SharedSparkSessionGDAL with RST_Medi
     test("Testing rst_median behavior with H3IndexSystem and JTS (tessellation case)") {
         noCodegen {
             assume(System.getProperty("os.name") == "Linux")
-            largeAreaBehavior(H3IndexSystem, JTS)
+            largeAreaBehavior(H3IndexSystem)
         }
     }
 
         test("Testing rst_median behavior with H3IndexSystem and JTS (small area case)") {
             noCodegen {
                 assume(System.getProperty("os.name") == "Linux")
-                smallAreaBehavior(H3IndexSystem, JTS)
+                smallAreaBehavior(H3IndexSystem)
             }
     }
 

@@ -1,11 +1,9 @@
 package com.databricks.labs.mosaic.functions.auxiliary
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometry
+import com.databricks.labs.mosaic.core.index.IndexSystem
+import com.databricks.labs.mosaic.core.jts.JTSGeometry
 import com.databricks.labs.mosaic.core.types.model.Coordinates
-import com.databricks.labs.mosaic.core.index.{IndexSystem, IndexSystemFactory}
-
-import org.apache.spark.sql.types.{ArrayType, BinaryType, BooleanType, DataType}
+import org.apache.spark.sql.types.BooleanType
 
 // Used for testing only
 object BadIndexSystem extends IndexSystem(BooleanType) {
@@ -26,13 +24,13 @@ object BadIndexSystem extends IndexSystem(BooleanType) {
 
     override def getResolution(res: Any): Int = throw new UnsupportedOperationException
 
-    override def getBufferRadius(geometry: MosaicGeometry, resolution: Int, geometryAPI: GeometryAPI): Double =
+    override def getBufferRadius(geometry: JTSGeometry, resolution: Int): Double =
         throw new UnsupportedOperationException
 
-    override def polyfill(geometry: MosaicGeometry, resolution: Int, geometryAPI: GeometryAPI): Seq[Long] =
+    override def polyfill(geometry: JTSGeometry, resolution: Int): Seq[Long] =
         throw new UnsupportedOperationException
 
-    override def indexToGeometry(index: Long, geometryAPI: GeometryAPI): MosaicGeometry = throw new UnsupportedOperationException
+    override def indexToGeometry(index: Long): JTSGeometry = throw new UnsupportedOperationException
 
     override def pointToIndex(lon: Double, lat: Double, resolution: Int): Long = throw new UnsupportedOperationException
 

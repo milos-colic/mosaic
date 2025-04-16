@@ -1,19 +1,11 @@
 package com.databricks.labs.mosaic.expressions.index
 
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometry
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
+import com.databricks.labs.mosaic.core.jts.{JTS, JTSGeometry}
 import com.databricks.labs.mosaic.core.types.ChipType
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.{
-    BinaryExpression,
-    ExpectsInputTypes,
-    Expression,
-    ExpressionDescription,
-    ExpressionInfo,
-    NullIntolerant
-}
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
+import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.types._
 
 @ExpressionDescription(
@@ -25,13 +17,11 @@ import org.apache.spark.sql.types._
   """,
   since = "1.0"
 )
-case class CellUnion(leftChip: Expression, rightChip: Expression, indexSystem: IndexSystem, geometryAPIName: String)
+case class CellUnion(leftChip: Expression, rightChip: Expression, indexSystem: IndexSystem)
     extends BinaryExpression
       with ExpectsInputTypes
       with NullIntolerant
       with CodegenFallback {
-
-    val geometryAPI: GeometryAPI = GeometryAPI(geometryAPIName)
 
     // noinspection DuplicatedCode
     override def inputTypes: Seq[DataType] = Seq(ChipType(LongType), ChipType(LongType))
@@ -71,8 +61,8 @@ case class CellUnion(leftChip: Expression, rightChip: Expression, indexSystem: I
         } else if (chip2.getBoolean(0)) {
             chip2
         } else {
-            val leftGeom: MosaicGeometry = geometryAPI.geometry(chip1.getBinary(2), "WKB")
-            val rightGeom: MosaicGeometry = geometryAPI.geometry(chip2.getBinary(2), "WKB")
+            val leftGeom: JTSGeometry = JTS.geometry(chip1.getBinary(2), "WKB")
+            val rightGeom: JTSGeometry = JTS.geometry(chip2.getBinary(2), "WKB")
             val union = leftGeom.union(rightGeom).toWKB
             InternalRow(false, index_id, union)
         }
@@ -80,7 +70,7 @@ case class CellUnion(leftChip: Expression, rightChip: Expression, indexSystem: I
 
     override def makeCopy(newArgs: Array[AnyRef]): Expression = {
         val asArray = newArgs.take(2).map(_.asInstanceOf[Expression])
-        val res = CellUnion(asArray(0), asArray(1), indexSystem, geometryAPIName)
+        val res = CellUnion(asArray(0), asArray(1), indexSystem)
         res.copyTagsFrom(this)
         res
     }

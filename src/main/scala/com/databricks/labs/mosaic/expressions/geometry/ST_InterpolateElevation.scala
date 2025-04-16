@@ -1,9 +1,6 @@
 package com.databricks.labs.mosaic.expressions.geometry
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
-import com.databricks.labs.mosaic.core.geometry.linestring.MosaicLineString
-import com.databricks.labs.mosaic.core.geometry.multipoint.MosaicMultiPoint
-import com.databricks.labs.mosaic.core.geometry.point.MosaicPoint
+import com.databricks.labs.mosaic.core.jts.{JTS, JTSLineString, JTSMultiPoint, JTSPoint}
 import com.databricks.labs.mosaic.core.types.model.GeometryTypeEnum._
 import com.databricks.labs.mosaic.core.types.model.TriangulationSplitPointTypeEnum
 import com.databricks.labs.mosaic.expressions.base.{GenericExpressionFactory, WithExpressionInfo}
@@ -40,10 +37,6 @@ case class ST_InterpolateElevation(
     def firstElementType: DataType = pointsArray.dataType.asInstanceOf[ArrayType].elementType
     def secondElementType: DataType = linesArray.dataType.asInstanceOf[ArrayType].elementType
 
-    def getGeometryAPI(expressionConfig: MosaicExpressionConfig): GeometryAPI = GeometryAPI(expressionConfig.getGeometryAPI)
-
-    def geometryAPI: GeometryAPI = getGeometryAPI(expressionConfig)
-
     override def eval(input: InternalRow): TraversableOnce[InternalRow] = {
         val pointsGeom =
             pointsArray
@@ -52,14 +45,14 @@ case class ST_InterpolateElevation(
                 .toObjectArray(firstElementType)
                 .map({
                     obj =>
-                        val g = geometryAPI.geometry(obj, firstElementType)
+                        val g = JTS.geometry(obj, firstElementType)
                         g.getGeometryType.toUpperCase(Locale.ROOT) match {
-                            case "POINT" => g.asInstanceOf[MosaicPoint]
-                            case _ => throw new UnsupportedOperationException("ST_InterpolateElevation requires Point geometry as masspoints input")
+                            case "POINT" => g.asInstanceOf[JTSPoint]
+                            case _ => throw new UnsupportedOperationException("ST_InterpolateElevation requires Point geometry as mass points input")
                         }
                 })
 
-        val multiPointGeom = geometryAPI.fromSeq(pointsGeom, MULTIPOINT).asInstanceOf[MosaicMultiPoint]
+        val multiPointGeom = JTS.fromSeq(pointsGeom, MULTIPOINT).asInstanceOf[JTSMultiPoint]
         val linesGeom =
             linesArray
                 .eval(input)
@@ -67,9 +60,9 @@ case class ST_InterpolateElevation(
                 .toObjectArray(firstElementType)
                 .map({
                     obj =>
-                        val g = geometryAPI.geometry(obj, firstElementType)
+                        val g = JTS.geometry(obj, firstElementType)
                         g.getGeometryType.toUpperCase(Locale.ROOT) match {
-                            case "LINESTRING" => g.asInstanceOf[MosaicLineString]
+                            case "LINESTRING" => g.asInstanceOf[JTSLineString]
                             case _ => throw new UnsupportedOperationException("ST_InterpolateElevation requires LineString geometry as breaklines input")
                         }
                 })
@@ -77,7 +70,7 @@ case class ST_InterpolateElevation(
         val splitPointFinderValue =
             TriangulationSplitPointTypeEnum.fromString(splitPointFinder.eval(input).asInstanceOf[UTF8String].toString)
 
-        val origin = geometryAPI.geometry(gridOrigin.eval(input), gridOrigin.dataType).asInstanceOf[MosaicPoint]
+        val origin = JTS.geometry(gridOrigin.eval(input), gridOrigin.dataType).asInstanceOf[JTSPoint]
         val gridWidthXValue = gridWidthX.eval(input).asInstanceOf[Int]
         val gridWidthYValue = gridWidthY.eval(input).asInstanceOf[Int]
         val gridSizeXValue = gridSizeX.eval(input).asInstanceOf[Double]
@@ -92,7 +85,7 @@ case class ST_InterpolateElevation(
             .asSeq
 
         val serializedPoints = interpolatedPoints
-            .map(geometryAPI.serialize(_, firstElementType))
+            .map(JTS.serialize(_, firstElementType))
 
         val outputRows = serializedPoints
             .map(g => InternalRow.fromSeq(Seq(g)))

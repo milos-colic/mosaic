@@ -1,7 +1,7 @@
 package com.databricks.labs.mosaic.expressions.raster
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
+import com.databricks.labs.mosaic.expressions.SpatialSQLAPIsMock.{st_area, st_buffer, st_centroid}
 import com.databricks.labs.mosaic.functions.MosaicContext
 import org.apache.spark.sql.QueryTest
 import org.scalatest.matchers.should.Matchers._
@@ -9,9 +9,9 @@ import org.scalatest.matchers.should.Matchers._
 trait RST_FromContentBehaviors extends QueryTest {
 
     // noinspection MapGetGet
-    def behaviors(indexSystem: IndexSystem, geometryAPI: GeometryAPI): Unit = {
+    def behaviors(indexSystem: IndexSystem): Unit = {
         spark.sparkContext.setLogLevel("ERROR")
-        val mc = MosaicContext.build(indexSystem, geometryAPI)
+        val mc = MosaicContext.build(indexSystem)
         mc.register()
         val sc = spark
 
@@ -27,7 +27,7 @@ trait RST_FromContentBehaviors extends QueryTest {
             .withColumn("tile", rst_fromcontent($"content", "GTiff"))
             .withColumn("bbox", rst_boundingbox($"tile"))
             .withColumn("cent", st_centroid($"bbox"))
-            .withColumn("clip_region", st_buffer($"cent", 0.1))
+            .withColumn("clip_region", st_buffer($"cent", lit(0.1)))
             .withColumn("clip", rst_clip($"tile", $"clip_region"))
             .withColumn("bbox2", rst_boundingbox($"clip"))
             .withColumn("result", st_area($"bbox") =!= st_area($"bbox2"))

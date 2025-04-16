@@ -1,6 +1,5 @@
 package com.databricks.labs.mosaic.expressions.raster
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.IndexSystem
 import com.databricks.labs.mosaic.functions.MosaicContext
 import org.apache.spark.sql.QueryTest
@@ -9,9 +8,9 @@ import org.scalatest.matchers.should.Matchers._
 
 trait RST_ReTileBehaviors extends QueryTest {
 
-    def retileBehavior(indexSystem: IndexSystem, geometryAPI: GeometryAPI): Unit = {
+    def retileBehavior(indexSystem: IndexSystem): Unit = {
         spark.sparkContext.setLogLevel("ERROR")
-        val mc = MosaicContext.build(indexSystem, geometryAPI)
+        val mc = MosaicContext.build(indexSystem)
         mc.register()
         val sc = spark
         import mc.functions._

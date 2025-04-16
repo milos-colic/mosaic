@@ -1,8 +1,8 @@
 package com.databricks.labs.mosaic.expressions.geometry
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.expressions.geometry.base.AsTileExpression
 import com.databricks.labs.mosaic.functions.MosaicExpressionConfig
+import com.databricks.labs.mosaic.gdal.MosaicGDAL
 import com.databricks.labs.mosaic.utils.PathUtils
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.aggregate.{ImperativeAggregate, TypedImperativeAggregate}
@@ -25,7 +25,6 @@ case class ST_AsGeojsonTileAgg(
       with BinaryLike[Expression]
       with AsTileExpression {
     
-    val geometryAPI: GeometryAPI = GeometryAPI.apply(expressionConfig.getGeometryAPI)
     override lazy val deterministic: Boolean = true
     override val left: Expression = geometryExpr
     override val right: Expression = attributesExpr
@@ -57,17 +56,17 @@ case class ST_AsGeojsonTileAgg(
     }
 
     override def eval(buffer: mutable.ArrayBuffer[Any]): Any = {
-        System.load("/usr/local/src/gdal-3.9.3/build/swig/java/libgdalalljni.so")
+        MosaicGDAL.loadSharedObjects()
         ogr.RegisterAll()
         val driver = ogr.GetDriverByName("GeoJSON")
         val tmpName = PathUtils.createTmpFilePath("geojson")
         val ds: DataSource = driver.CreateDataSource(tmpName)
 
-        val srs = getSRS(buffer.head, geometryExpr, geometryAPI)
+        val srs = getSRS(buffer.head, geometryExpr)
 
         val layer = createLayer(ds, srs, attributesExpr.dataType.asInstanceOf[StructType])
         
-        insertRows(buffer, layer, geometryExpr, geometryAPI, attributesExpr)
+        insertRows(buffer, layer, geometryExpr, attributesExpr)
 
         ds.FlushCache()
         ds.delete()

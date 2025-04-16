@@ -1,6 +1,6 @@
 package com.databricks.labs.mosaic.expressions.raster
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
+import com.databricks.labs.mosaic.core.jts.JTS
 import com.databricks.labs.mosaic.core.raster.api.GDAL
 import com.databricks.labs.mosaic.core.raster.operator.clip.RasterClipByVector
 import com.databricks.labs.mosaic.core.types.RasterTileType
@@ -31,8 +31,6 @@ case class RST_Clip(
       with NullIntolerant
       with CodegenFallback {
 
-    val geometryAPI: GeometryAPI = GeometryAPI(expressionConfig.getGeometryAPI)
-
     override def dataType: org.apache.spark.sql.types.DataType = {
         GDAL.enable(expressionConfig)
         RasterTileType(expressionConfig.getCellIdType, rastersExpr, expressionConfig.isRasterUseCheckpoint)
@@ -51,11 +49,11 @@ case class RST_Clip(
       *   The clipped raster.
       */
     override def rasterTransform(tile: MosaicRasterTile, arg1: Any, arg2: Any): Any = {
-        val geometry = geometryAPI.geometry(arg1, geometryExpr.dataType)
+        val geometry = JTS.geometry(arg1, geometryExpr.dataType)
         val geomCRS = geometry.getSpatialReferenceOSR
         val cutlineAllTouched = arg2.asInstanceOf[Boolean]
         tile.copy(
-          raster = RasterClipByVector.clip(tile.getRaster, geometry, geomCRS, geometryAPI, cutlineAllTouched)
+          raster = RasterClipByVector.clip(tile.getRaster, geometry, geomCRS, cutlineAllTouched)
         )
     }
 

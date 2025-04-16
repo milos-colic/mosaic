@@ -1,7 +1,6 @@
 package com.databricks.labs.mosaic.core.index
 
-import com.databricks.labs.mosaic.core.geometry.MosaicGeometry
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
+import com.databricks.labs.mosaic.core.jts.JTSGeometry
 import com.databricks.labs.mosaic.core.types.model.{Coordinates, GeometryTypeEnum, MosaicChip}
 import com.databricks.labs.mosaic.core.types.model.GeometryTypeEnum._
 import org.apache.spark.sql.types._
@@ -137,7 +136,7 @@ abstract class IndexSystem(var cellIdType: DataType) extends Serializable {
       * corresponding to the centroid index of the provided geometry.
       *
       * @param geometry
-      *   An instance of [[MosaicGeometry]] for which we are computing the
+      *   An instance of [[JTSGeometry]] for which we are computing the
       *   optimal buffer radius.
       * @param resolution
       *   A resolution to be used to get the centroid index geometry.
@@ -145,9 +144,9 @@ abstract class IndexSystem(var cellIdType: DataType) extends Serializable {
       *   An optimal radius to buffer the geometry in order to avoid blind spots
       *   when performing polyfill.
       */
-    def getBufferRadius(geometry: MosaicGeometry, resolution: Int, geometryAPI: GeometryAPI): Double
+    def getBufferRadius(geometry: JTSGeometry, resolution: Int): Double
 
-    def alignToGrid(geometry: MosaicGeometry): MosaicGeometry = geometry
+    def alignToGrid(geometry: JTSGeometry): JTSGeometry = geometry
 
     /**
       * Returns a set of indices that represent the input geometry. Depending on
@@ -163,7 +162,7 @@ abstract class IndexSystem(var cellIdType: DataType) extends Serializable {
       * @return
       *   A set of indices representing the input geometry.
       */
-    def polyfill(geometry: MosaicGeometry, resolution: Int, geometryAPI: GeometryAPI): Seq[Long]
+    def polyfill(geometry: JTSGeometry, resolution: Int): Seq[Long]
 
     /**
       * @see
@@ -176,13 +175,12 @@ abstract class IndexSystem(var cellIdType: DataType) extends Serializable {
       *   A border area representation via [[MosaicChip]] set.
       */
     def getBorderChips(
-        geometry: MosaicGeometry,
+        geometry: JTSGeometry,
         borderIndices: Seq[Long],
-        keepCoreGeom: Boolean,
-        geometryAPI: GeometryAPI
+        keepCoreGeom: Boolean
     ): Seq[MosaicChip] = {
         val intersections = for (index <- borderIndices) yield {
-            val indexGeom = indexToGeometry(index, geometryAPI)
+            val indexGeom = indexToGeometry(index)
             val intersect = geometry.intersection(indexGeom)
             val coerced = coerceChipGeometry(intersect, indexGeom, geometry)
             val isCore = coerced.equals(indexGeom)
@@ -205,9 +203,9 @@ abstract class IndexSystem(var cellIdType: DataType) extends Serializable {
       * @return
       *   A core area representation via [[MosaicChip]] set.
       */
-    def getCoreChips(coreIndices: Seq[Long], keepCoreGeom: Boolean, geometryAPI: GeometryAPI): Seq[MosaicChip] = {
+    def getCoreChips(coreIndices: Seq[Long], keepCoreGeom: Boolean): Seq[MosaicChip] = {
         coreIndices.map(index => {
-            val indexGeom = if (keepCoreGeom) indexToGeometry(index, geometryAPI) else null
+            val indexGeom = if (keepCoreGeom) indexToGeometry(index) else null
             MosaicChip(isCore = true, Left(index), indexGeom)
         })
     }
@@ -218,9 +216,9 @@ abstract class IndexSystem(var cellIdType: DataType) extends Serializable {
       * @param index
       *   Id of the index whose geometry should be returned.
       * @return
-      *   An instance of [[MosaicGeometry]] corresponding to index.
+      *   An instance of [[JTSGeometry]] corresponding to index.
       */
-    def indexToGeometry(index: Long, geometryAPI: GeometryAPI): MosaicGeometry
+    def indexToGeometry(index: Long): JTSGeometry
 
     /**
       * Get the index ID corresponding to the provided coordinates.
@@ -290,7 +288,7 @@ abstract class IndexSystem(var cellIdType: DataType) extends Serializable {
 
     def area(index: String): Double = area(parse(index))
 
-    def coerceChipGeometry(geom: MosaicGeometry, indexGeom: MosaicGeometry, originGeom: MosaicGeometry): MosaicGeometry = {
+    def coerceChipGeometry(geom: JTSGeometry, indexGeom: JTSGeometry, originGeom: JTSGeometry): JTSGeometry = {
         val geomType = GeometryTypeEnum.fromString(geom.getGeometryType)
         val originGeomType = GeometryTypeEnum.fromString(originGeom.getGeometryType)
         if (geomType == GEOMETRYCOLLECTION || geomType != originGeomType) {
@@ -302,7 +300,7 @@ abstract class IndexSystem(var cellIdType: DataType) extends Serializable {
         }
     }
 
-    def coerceChipGeometry(geometries: Seq[MosaicGeometry]): Seq[MosaicGeometry] = {
+    def coerceChipGeometry(geometries: Seq[JTSGeometry]): Seq[JTSGeometry] = {
         val types = geometries.map(_.getGeometryType).map(GeometryTypeEnum.fromString)
         if (types.contains(MULTIPOLYGON) || types.contains(POLYGON)) {
             geometries.filter(g => Seq(POLYGON, MULTIPOLYGON).contains(GeometryTypeEnum.fromString(g.getGeometryType)))

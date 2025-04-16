@@ -1,6 +1,5 @@
 package com.databricks.labs.mosaic.expressions.raster.base
 
-import com.databricks.labs.mosaic.core.geometry.api.GeometryAPI
 import com.databricks.labs.mosaic.core.index.{IndexSystem, IndexSystemFactory}
 import com.databricks.labs.mosaic.core.raster.api.GDAL
 import com.databricks.labs.mosaic.core.raster.io.RasterCleaner
@@ -48,7 +47,6 @@ abstract class RasterToGridExpression[T <: Expression: ClassTag, P](
 
     /** The index system to be used. */
     val indexSystem: IndexSystem = IndexSystemFactory.getIndexSystem(expressionConfig.getIndexSystem)
-    val geometryAPI: GeometryAPI = GeometryAPI(expressionConfig.getGeometryAPI)
 
     /**
       * It projects the pixels to the grid and groups by the results so that the
