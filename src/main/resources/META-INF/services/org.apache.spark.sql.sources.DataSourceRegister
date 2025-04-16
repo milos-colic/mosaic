@@ -4,5 +4,3 @@ com.databricks.labs.mosaic.datasource.OpenGeoDBFileFormat
 com.databricks.labs.mosaic.datasource.OGRFileFormat
 com.databricks.labs.mosaic.datasource.gdal.GDALFileFormat
 com.databricks.labs.mosaic.datasource.UserDefinedFileFormat
-com.databricks.labs.mosaic.datasource.imagecube.H3CubeReaderV1
-com.databricks.labs.mosaic.datasource.imagecube.H3CubeDataSourceV2
