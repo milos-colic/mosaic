@@ -8,6 +8,22 @@ final class DirectReader(initialCapacity: Int = 0) {
     private var dataBuf = new Array[Double](initialCapacity)
     private var maskBuf = new Array[Byte](initialCapacity)
     private var outputBuf = Array.ofDim[Double](0, 0)
+    
+    // Minimum buffer capacity to avoid frequent reallocations for small reads
+    private val MIN_BUFFER_SIZE = 1024
+    
+    /**
+     * Calculates optimal buffer size with exponential growth strategy
+     * to reduce memory allocations during pixel reading operations.
+     */
+    private def optimalBufferSize(requiredSize: Int): Int = {
+        if (requiredSize <= MIN_BUFFER_SIZE) MIN_BUFFER_SIZE
+        else {
+            // Find next power of 2 that's >= requiredSize, capped at reasonable limit
+            val maxSize = 16 * 1024 * 1024 // 16MB limit for single buffer
+            math.min(Integer.highestOneBit(requiredSize - 1) << 1, maxSize)
+        }
+    }
 
     def readWindow(
         band: Band,
@@ -23,8 +39,9 @@ final class DirectReader(initialCapacity: Int = 0) {
 
         val len = w * h
         if (dataBuf.length < len) {
-            dataBuf = new Array[Double](len)
-            maskBuf = new Array[Byte](len)
+            val optimalSize = optimalBufferSize(len)
+            dataBuf = new Array[Double](optimalSize)
+            maskBuf = new Array[Byte](optimalSize)
         }
 
         // read raw

@@ -3,6 +3,7 @@ package com.dblabs.gbx.rasterx.expressions.grid
 import com.dblabs.gbx.expressions.ExpressionConfig
 import com.dblabs.gbx.gridx.grid.H3
 import com.dblabs.gbx.rasterx.gdal.RasterDriver
+import com.dblabs.gbx.rasterx.operations.BandAccessors
 import com.dblabs.gbx.rasterx.util.{RST_ExpressionUtil, RasterSerializationUtil}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.util.ArrayData
@@ -36,13 +37,18 @@ object RST_H3_RasterToGrid {
         val nPix = xSize * ySize
         val bands = ds.getRasterCount
 
-        val bandBuf = new Array[Double](nPix)
-        val maskBuf = new Array[Byte](nPix)
+        // Use optimized multi-band reading for better performance
+        val allBands = Array.tabulate(bands)(i => ds.GetRasterBand(i + 1))
+        val bandBuffers = BandAccessors.readMultipleBands(allBands, 0, 0, xSize, ySize)
 
-        (1 to bands).iterator.map { bi =>
-            val b = ds.GetRasterBand(bi)
+        (0 until bands).iterator.map { bandIndex =>
+            val bandBuf = bandBuffers(bandIndex)
+            val b = allBands(bandIndex)
             val m = b.GetMaskBand()
-            b.ReadRaster(0, 0, xSize, ySize, bandBuf)
+            
+            // Use optimized buffer size for mask reading
+            val optimalMaskBufSize = BandAccessors.getOptimalBufferSize(nPix)
+            val maskBuf = new Array[Byte](optimalMaskBufSize)
             m.ReadRaster(0, 0, xSize, ySize, maskBuf)
 
             var valid = 0; var i = 0
