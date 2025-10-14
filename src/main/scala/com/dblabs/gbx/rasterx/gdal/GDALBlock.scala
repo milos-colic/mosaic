@@ -140,6 +140,44 @@ object GDALBlock {
             blockSize + paddingStrides * stride
         }
     }
+    
+    /**
+     * Calculates optimal block size based on GDAL's natural block layout.
+     * Reading data in alignment with GDAL's internal blocking reduces I/O overhead.
+     */
+    def getOptimalBlockSize(band: Band, requestedWidth: Int, requestedHeight: Int): (Int, Int) = {
+        val naturalBlockWidth = band.GetBlockXSize()
+        val naturalBlockHeight = band.GetBlockYSize()
+        
+        // If the dataset doesn't have natural blocks (e.g., strips), use sensible defaults
+        val optimalWidth = if (naturalBlockWidth > 1 && naturalBlockWidth <= 2048) {
+            // Align to natural block boundaries when possible
+            ((requestedWidth + naturalBlockWidth - 1) / naturalBlockWidth) * naturalBlockWidth
+        } else {
+            // Use power-of-2 block sizes for better cache performance
+            math.min(nextPowerOf2(requestedWidth), 512)
+        }
+        
+        val optimalHeight = if (naturalBlockHeight > 1 && naturalBlockHeight <= 2048) {
+            ((requestedHeight + naturalBlockHeight - 1) / naturalBlockHeight) * naturalBlockHeight
+        } else {
+            math.min(nextPowerOf2(requestedHeight), 512)
+        }
+        
+        // Clamp to raster dimensions
+        val clampedWidth = math.min(optimalWidth, band.getXSize)
+        val clampedHeight = math.min(optimalHeight, band.getYSize)
+        
+        (clampedWidth, clampedHeight)
+    }
+    
+    /**
+     * Efficiently calculates the next power of 2 for block size alignment.
+     */
+    private def nextPowerOf2(n: Int): Int = {
+        if (n <= 0) 1
+        else Integer.highestOneBit(n - 1) << 1
+    }
 
     def apply(
         band: Band,

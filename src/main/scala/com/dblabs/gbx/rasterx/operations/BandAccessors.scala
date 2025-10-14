@@ -66,7 +66,10 @@ object BandAccessors {
         val h = band.GetYSize()
         val bW = mask.GetBlockXSize()
         val bH = mask.GetBlockYSize()
-        val buffer = java.nio.ByteBuffer.allocateDirect(bW * bH)
+        
+        // Use optimal buffer size for better performance
+        val optimalBufferSize = getOptimalBufferSize(bW * bH)
+        val buffer = java.nio.ByteBuffer.allocateDirect(optimalBufferSize)
 
         var y = 0
         while (y < h) {
@@ -84,6 +87,45 @@ object BandAccessors {
             y += bH
         }
         true
+    }
+
+    /**
+     * Calculates optimal buffer size for GDAL operations to reduce memory allocation overhead.
+     * Uses power-of-2 sizing with minimum thresholds for better cache performance.
+     */
+    def getOptimalBufferSize(requiredSize: Int): Int = {
+        val minSize = 4096  // 4KB minimum for better I/O performance
+        if (requiredSize <= minSize) minSize
+        else {
+            // Round up to next power of 2, with reasonable maximum
+            val maxSize = 64 * 1024 * 1024  // 64MB maximum
+            val nextPowerOf2 = Integer.highestOneBit(requiredSize - 1) << 1
+            math.min(nextPowerOf2, maxSize)
+        }
+    }
+
+    /**
+     * Efficiently reads multiple bands from the same raster region to reduce JNI overhead.
+     * This is particularly useful when multiple bands need to be processed together.
+     */
+    def readMultipleBands(
+        bands: Array[Band], 
+        xOffset: Int, 
+        yOffset: Int, 
+        width: Int, 
+        height: Int
+    ): Array[Array[Double]] = {
+        val pixelCount = width * height
+        val result = Array.ofDim[Double](bands.length, pixelCount)
+        
+        // Read all bands in sequence with pre-allocated buffers
+        var i = 0
+        while (i < bands.length) {
+            bands(i).ReadRaster(xOffset, yOffset, width, height, result(i))
+            i += 1
+        }
+        
+        result
     }
 
 }
